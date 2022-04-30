@@ -4,15 +4,57 @@ import random
 
 
 def polynomial_kernel(x1, x2):
-    return (x1.T * x2) ** 2
+    return (1 + x1.T * x2 ) ** 2
+
+def find_accuracy(nclusters, ytrue, cluster_indices):
+    digit = np.zeros((nclusters, ), dtype = int)
+    count = np.zeros((nclusters, ), dtype = int)
+    cardinality = np.zeros((nclusters, ), dtype = int)
+    for i in range(nclusters):
+        unique_digits = np.unique(ytrue[cluster_indices == i], return_counts = True)
+        digit[i] = unique_digits[0][np.argmax(unique_digits[1])]
+        count[i] = unique_digits[1][np.argmax(unique_digits[1])]
+        cardinality[i] = sum(unique_digits[1])
+
+    accuracy = (sum(count)/ sum(cardinality)) * 100 # %
+    return accuracy
+
+def SVD(data, k = 1e-1, L = None, return_compressed = True, return_L = False):
+
+    """
+    Compute the SVD decomposition
+
+    Parameters:
+    ------
+    data    (np.ndarray)           2D array representing an image
+    k       (float)                threshold to choose the singular values
+    L       (int)                  no. of singular values (degree of compression)
+    return_compressed (bool)       Whether to return the compressed image
+    return_L (bool)                Whether to return the no. of singular values
+
+    Returns:
+    _______
+
+    Returns the compressed image (np.ndarray) as 2D array (or) returns the no. of singular values based on the parameters.
+
+    
+    """
+    
+    U, s, V = np.linalg.svd(data, full_matrices=True)
+    if L == None: 
+        L = sum(s > k)
+    if return_compressed:
+        return U[:, :L] @ np.diag(s)[:L, :L] @ V[:L, :]
+    if return_L:
+        return L
 
 
-def K_means_clustering(X, y, subset, max_iter=50, tolerance=1e-16):
+def cluster_initialization(X, nclusters):
 
     max_distance = []
     positions = []
-    for i in range(100):
-        random_positions = random.sample(range(len(X)), 100)
+    for i in range(nclusters * nclusters):
+        random_positions = random.sample(range(len(X)), nclusters * nclusters)
         combos = []
         for i in range(10):
             combos.append(
@@ -20,14 +62,22 @@ def K_means_clustering(X, y, subset, max_iter=50, tolerance=1e-16):
                     [
                         np.sum((X[indices[0]] - X[indices[1]]) ** 2)
                         for indices in list(
-                            combinations(random_positions[10 * i : 10 * (i + 1)], 2)
+                            combinations(random_positions[nclusters * i : nclusters * (i + 1)], 2)
                         )
                     ]
                 )
             )
             max_index = np.argmax(combos)
-            positions.append(random_positions[10 * max_index : 10 * (max_index + 1)])
+            positions.append(random_positions[nclusters * max_index : nclusters * (max_index + 1)])
             max_distance.append(combos[np.argmax(combos)])
+
+    return positions, max_distance
+
+
+
+def K_means_clustering(X, n_clusters, subset, max_iter= np.inf, tolerance=1e-16):
+
+    positions, max_distance = cluster_initialization(X, n_clusters)
 
     centroids = []
     clusters = {}
@@ -43,10 +93,10 @@ def K_means_clustering(X, y, subset, max_iter=50, tolerance=1e-16):
         )
 
     old_residual = np.sum(data_distances_to_centroids)
-    residual = old_residual + 1
+    residual = old_residual + tolerance * 2
     no_iterations = 0
 
-    while np.abs(old_residual - residual) > tolerance and (no_iterations < max_iter):
+    while np.abs(residual - old_residual) > tolerance and (no_iterations < max_iter):
 
         min_distance = np.argmin(data_distances_to_centroids, axis=1)
 
@@ -66,7 +116,6 @@ def K_means_clustering(X, y, subset, max_iter=50, tolerance=1e-16):
         residual = np.sum(data_distances_to_centroids)
 
         no_iterations += 1
-
     return centroids, min_distance
 
 
