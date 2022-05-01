@@ -1,11 +1,28 @@
+"""
+Script that implements that k-means algorithm on the MNIST dataset, All necessary functions for the script 
+are defined below.
+"""
+
 # Import the dependencies
 import time
 from math import atan, degrees
 import cv2 as cv
-from numpy import argmin, argmax, array, empty, exp, ma, ndarray, nonzero, histogram, random, zeros
+from numpy import (
+    argmin,
+    argmax,
+    array,
+    empty,
+    exp,
+    ma,
+    ndarray,
+    nonzero,
+    histogram,
+    random,
+    zeros,
+)
 from numpy.linalg import svd
 from scipy.spatial.distance import cdist
-from sklearn.cluster import KMeans # to verify the performance
+from sklearn.cluster import KMeans  # to verify the performance
 from sklearn.datasets import fetch_openml
 from sklearn.metrics import homogeneity_score, completeness_score, accuracy_score
 from sklearn.model_selection import train_test_split
@@ -34,16 +51,16 @@ def scores(true_labels, labels):
 
 def cluster_initialization(X, nclusters):
 
-    '''
+    """
     Initialize the clusters by maximizing the Sqeuclidean distance between the centroids
 
     Parameters:
     ----------
     X  (np.ndarray)  data
     nclusters (int) no of clusters
-    
-    
-    '''
+
+
+    """
 
     distance = []
     positions = []
@@ -56,16 +73,21 @@ def cluster_initialization(X, nclusters):
                     [
                         np.sum((X[indices[0]] - X[indices[1]]) ** 2)
                         for indices in list(
-                            combinations(random_positions[nclusters * i : nclusters * (i + 1)], 2)
+                            combinations(
+                                random_positions[nclusters * i : nclusters * (i + 1)], 2
+                            )
                         )
                     ]
                 )
             )
             max_index = np.argmax(combos)
-            positions.append(random_positions[nclusters * max_index : nclusters * (max_index + 1)])
+            positions.append(
+                random_positions[nclusters * max_index : nclusters * (max_index + 1)]
+            )
             distance.append(combos[np.argmax(combos)])
 
     return positions, distance
+
 
 def kMeans(X: ndarray, y_true, K: int, metric: str):
     # log('Starting K-means clustering using the metric \'%s\'' % metric)
@@ -83,9 +105,9 @@ def kMeans(X: ndarray, y_true, K: int, metric: str):
 
         # Assign x_i to cluster k = argmin_j || x_i - c_j ||
         for i, x in enumerate(X):
-            if metric == 'gauss':
-                gamma = .001
-                dists = cdist([x], c, 'sqeuclidean')
+            if metric == "gauss":
+                gamma = 0.001
+                dists = cdist([x], c, "sqeuclidean")
                 dists = exp(-gamma * dists)
             else:
                 dists = cdist([x], c, metric)
@@ -93,9 +115,13 @@ def kMeans(X: ndarray, y_true, K: int, metric: str):
 
         # Update the centroid positions
         for k in range(K):
-            Ck = X[[i for i, yi in enumerate(y) if yi == k]]  # Compute Ck = {x_i where the label y_i = k}
+            Ck = X[
+                [i for i, yi in enumerate(y) if yi == k]
+            ]  # Compute Ck = {x_i where the label y_i = k}
             if len(Ck) > 0:
-                c[k] = Ck.mean(axis=0)  # Centroid = the mean of the elements/columns in Ck
+                c[k] = Ck.mean(
+                    axis=0
+                )  # Centroid = the mean of the elements/columns in Ck
                 eNew += cdist([c[k]], Ck).sum()  # Compute the error
             else:
                 # Try to find a good position for this centroid
@@ -104,7 +130,9 @@ def kMeans(X: ndarray, y_true, K: int, metric: str):
     # Determine the accuracy
     a = 0
     for k in range(K):
-        Lk = y_true[[i for i, yi in enumerate(y) if yi == k]]  # Lk = {y_true_i : y_i = k}
+        Lk = y_true[
+            [i for i, yi in enumerate(y) if yi == k]
+        ]  # Lk = {y_true_i : y_i = k}
         Lk = DataFrame(data=Lk)
         cnt = Lk.value_counts()
         cnt = cnt.values
@@ -116,7 +144,8 @@ def kMeans(X: ndarray, y_true, K: int, metric: str):
 
     return y, a  # Return the labels
 
-def SVD(data, k = 1e-1, L = None, return_compressed = True, return_L = False):
+
+def SVD(data, k=1e-1, L=None, return_compressed=True, return_L=False):
 
     """
     Compute the SVD decomposition
@@ -134,11 +163,11 @@ def SVD(data, k = 1e-1, L = None, return_compressed = True, return_L = False):
 
     Returns the compressed image (np.ndarray) as 2D array (or) returns the no. of singular values based on the parameters.
 
-    
+
     """
-    
+
     U, s, V = np.linalg.svd(data, full_matrices=True)
-    if L == None: 
+    if L == None:
         L = sum(s > k)
     if return_compressed:
         return U[:, :L] @ np.diag(s)[:L, :L] @ V[:L, :]
@@ -148,14 +177,14 @@ def SVD(data, k = 1e-1, L = None, return_compressed = True, return_L = False):
 
 # Visualize the given centroids
 def showCentroids(c):
-    print('Centroids:')
+    print("Centroids:")
     plt.figure(figsize=(20, 10))
     if isinstance(c, DataFrame):
         c = c.to_numpy()
     for i, x in enumerate(c):
         plt.subplot(2, 5, i + 1)
         plt.imshow(x.reshape(28, 28))
-        plt.axis('off')
+        plt.axis("off")
     plt.show()
 
 
@@ -171,15 +200,15 @@ def show10(X, y):
         for i, x in Xk.iterrows():
             plt.subplot(10, 10, n)
             plt.imshow(x.values.reshape(28, 28))
-            plt.axis('off')
+            plt.axis("off")
             n += 1
     plt.show()
 
 
 # Load the data
-print('Loading the data')
-X, y = fetch_openml('mnist_784', version=1, return_X_y=True, cache=True)
-print('The data are loaded')
+print("Loading the data")
+X, y = fetch_openml("mnist_784", version=1, return_X_y=True, cache=True)
+print("The data are loaded")
 
 # For testing: Split the data set into a smaller training (& validation) set
 if final:
@@ -191,10 +220,10 @@ log("Let us train using " + str(len(X_train)) + " samples.")
 
 # Remove the original indices & scale X
 X_train = X_train.reset_index(drop=True) / 255
-y_train = y_train.astype('int').reset_index(drop=True)
+y_train = y_train.astype("int").reset_index(drop=True)
 
 # Just to get an impression of the data contents (labels)
-print('Frequency per label:\n', y_train.value_counts())
+print("Frequency per label:\n", y_train.value_counts())
 
 # Convert the data to arrays
 # X_train = X_train.to_numpy()
@@ -217,35 +246,41 @@ def doCluster(X: ndarray, y, show=True):
     # Apply the K-means clustering algorithm using the square Euclidean distance measure
     start = time.time()
     #     XX = X.to_numpy
-    myLabels, a1 = kMeans(X, y, K, 'sqeuclidean')
+    myLabels, a1 = kMeans(X, y, K, "sqeuclidean")
     t1 = time.time() - start
     myScore = scores(y, myLabels)
 
     # Use correlation as distance measure
     start = time.time()
-    myLabels2, a2 = kMeans(X, y, K, 'correlation')
+    myLabels2, a2 = kMeans(X, y, K, "correlation")
     t2 = time.time() - start
     myScore2 = scores(y, myLabels2)
 
     # Use the Gaussian distance measure
     start = time.time()
-    myLabels3, a3 = kMeans(X, y, K, 'gauss')
+    myLabels3, a3 = kMeans(X, y, K, "gauss")
     t3 = time.time() - start
     myScore3 = scores(y, myLabels3)
 
     # Use an existing algorithm
     start = time.time()
     #     kmeans = KMeans(n_clusters=K, random_state=1).fit(X)
-    kmeans = KMeans(n_clusters=K, init='k-means++').fit(X)  # Slight speedup
+    kmeans = KMeans(n_clusters=K, init="k-means++").fit(X)  # Slight speedup
     t = time.time() - start
     score = scores(y, kmeans.labels_)
 
     # Print the results
-    log('Results:\nAlgorithm \tHomogeneity Completeness   Accuracy   Time [s]\n'
-        'My K-Means \t%11.4f %12.4f %10.1f%% %9.3f' % (myScore[0], myScore[1], a1 * 100, t1) +
-        '\nMy K-Means corr.%11.4f %12.4f %10.1f%% %9.3f' % (myScore2[0], myScore2[1], a2 * 100, t2) +
-        '\nMy K-Means gauss.%10.4f %12.4f %10.1f%% %9.3f' % (myScore3[0], myScore3[1], a3 * 100, t3) +
-        '\nExist. K-Means\t%11.4f %12.4f %10.1f%% %9.3f' % (score[0], score[1], A(kmeans) * 100, t))
+    log(
+        "Results:\nAlgorithm \tHomogeneity Completeness   Accuracy   Time [s]\n"
+        "My K-Means \t%11.4f %12.4f %10.1f%% %9.3f"
+        % (myScore[0], myScore[1], a1 * 100, t1)
+        + "\nMy K-Means corr.%11.4f %12.4f %10.1f%% %9.3f"
+        % (myScore2[0], myScore2[1], a2 * 100, t2)
+        + "\nMy K-Means gauss.%10.4f %12.4f %10.1f%% %9.3f"
+        % (myScore3[0], myScore3[1], a3 * 100, t3)
+        + "\nExist. K-Means\t%11.4f %12.4f %10.1f%% %9.3f"
+        % (score[0], score[1], A(kmeans) * 100, t)
+    )
 
     # if show:
     #     showCentroids(kmeans.cluster_centers_)
@@ -265,7 +300,7 @@ def equalize(img):
     cdf = hist.cumsum()
     cdf_m = ma.masked_equal(cdf, 0)
     cdf_m = (cdf_m - cdf_m.min()) * 255 / (cdf_m.max() - cdf_m.min())
-    cdf = ma.filled(cdf_m, 0).astype('uint8')
+    cdf = ma.filled(cdf_m, 0).astype("uint8")
 
     return cdf[img]
 
@@ -279,7 +314,7 @@ def fitLine(X, Y):
     n = len(X)
 
     numer = sum([xi * yi for xi, yi in zip(X, Y)]) - n * xbar * ybar
-    denum = sum([xi ** 2 for xi in X]) - n * xbar ** 2
+    denum = sum([xi**2 for xi in X]) - n * xbar**2
 
     b = numer / denum
     a = ybar - b * xbar
@@ -304,7 +339,9 @@ def correctRotation(img):
     df = DataFrame(data=nz)
     means = df.T.groupby(0).mean()
     inds = means.index.to_numpy()  # Make it an ndarray
-    _, b = fitLine(inds, means[1].values)  # Fit a line (y = a + b * x) in order to detect the rotation
+    _, b = fitLine(
+        inds, means[1].values
+    )  # Fit a line (y = a + b * x) in order to detect the rotation
     return rotate(img, degrees(atan(-b)))  # Rotate the image
 
 
@@ -318,7 +355,7 @@ def sharpen(img):
 
 # Define an image processing function. Use r as radius for the Gaussian blurring step
 def procImg(img, r):
-    img = (255 * img).astype('uint8')  # Convert the image to uint8 to process it
+    img = (255 * img).astype("uint8")  # Convert the image to uint8 to process it
     img = cv.GaussianBlur(img, (r, r), 0)  # Blur
     img = cv.equalizeHist(img)  # Equalize
     # Other tries were the following, though they did not improve the clustering accuracy.
@@ -333,7 +370,7 @@ def procImg(img, r):
     img = correctRotation(img)
     #     img = correctRotation(img)  # Try a second correction
 
-    return img.astype('float32') / 255
+    return img.astype("float32") / 255
 
 
 # Test the image processor
@@ -369,7 +406,7 @@ a = [0] * len(r_vals)  # Accuracy
 t = [0] * len(r_vals)  # Processing times
 for i in range(len(r_vals)):
     r = r_vals[i]
-    log('Test r = {:d}'.format(r))
+    log("Test r = {:d}".format(r))
 
     # Process the images using blurring radius r
     t_i = time.time()
@@ -380,12 +417,12 @@ for i in range(len(r_vals)):
     n_acc = 3
     acc = 0
     for j in range(n_acc):
-        _, acc_j = kMeans(X_proc, y_train, K, 'sqeuclidean')
+        _, acc_j = kMeans(X_proc, y_train, K, "sqeuclidean")
         acc += acc_j
     a[i] = acc / n_acc
 
 # Plot the results
-print(len(X_train), 'samples were used.')
+print(len(X_train), "samples were used.")
 
 
 # print('The average image processing time for this data set was', array(t).mean(), 's.')
@@ -394,26 +431,30 @@ print(len(X_train), 'samples were used.')
 def plotAccTime(x_vals, x_label, a, t, title):
     # Plot the accuracy
     fig, ax = plt.subplots()
-    ax.plot(x_vals, 100 * array(a), '.-')
-    ax.tick_params(axis='y', labelcolor='blue')
-    ax.legend(['Accuracy'])
+    ax.plot(x_vals, 100 * array(a), ".-")
+    ax.tick_params(axis="y", labelcolor="blue")
+    ax.legend(["Accuracy"])
 
     # Plot the image processing time
     ax2 = ax.twinx()
-    ax2.plot(x_vals, t, '.-k')
-    ax2.legend(['Processing Time'], loc='lower right')
+    ax2.plot(x_vals, t, ".-k")
+    ax2.legend(["Processing Time"], loc="lower right")
     plt.xlabel(x_label)
-    plt.ylabel('Accuracy [%]')
+    plt.ylabel("Accuracy [%]")
     plt.title(title)
 
 
-plotAccTime(r_vals, 'Radius r', a, t, 'Blurring Efficiency')
+plotAccTime(r_vals, "Radius r", a, t, "Blurring Efficiency")
 
 # Select the best radius r
 r_best = r_vals[argmax(a)]
-print('The best radius is', r_best,
-      ', giving an accuracy of {:2.1f} %.\nThe resulting processing time is approx. {:.0f} s.'.format(100 * max(a),
-                                                                                                      t[argmax(a)]));
+print(
+    "The best radius is",
+    r_best,
+    ", giving an accuracy of {:2.1f} %.\nThe resulting processing time is approx. {:.0f} s.".format(
+        100 * max(a), t[argmax(a)]
+    ),
+)
 
 # Reprocess the data using the best radius r_best
 X_proc = process(X_train_arr, r_best)
@@ -423,4 +464,6 @@ X_proc = process(X_train_arr, r_best)
 doCluster(X_proc, y_train)
 
 # Compress the images using SVD
-compressed = np.array(list(map(lambda x : SVD(x.reshape(28, -1), L = 3).flatten(), X_train_arr)))
+compressed = np.array(
+    list(map(lambda x: SVD(x.reshape(28, -1), L=3).flatten(), X_train_arr))
+)
