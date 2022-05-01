@@ -85,8 +85,8 @@ t1 = time.time()
 K = 10 # Number of clusters
 [num_samples, num_features] = np.shape(Xnew)
 
-kernel_type = 'gaussian'  # or 'gaussian' or 'euclidean'
-param = 1/100  # kernel function parameter
+kernel_type = 'polynomial'  # or 'gaussian' or 'euclidean'
+param = 2  # kernel function parameter
 
 max_iter = 50    # Maximum number of iterations
 
@@ -189,5 +189,5 @@ Acc = sum(A) / num_samples
 
 #%% Show metrics
 print('Accuracy: ', Acc)
-print('Completeness: ', metrics.completeness_score(ynew, idx))
-print('Homogeneity: ', metrics.homogeneity_score(ynew, idx))
+# print('Completeness: ', metrics.completeness_score(ynew, idx))
+# print('Homogeneity: ', metrics.homogeneity_score(ynew, idx))
