@@ -65,8 +65,6 @@ def mostFrequent(arr):
     return res, max_count
 
 #%% Start-up
-t1 = time.time()
-
 # Convert data to arrays
 Xnp = pd.DataFrame.to_numpy(X)
 ynp = pd.DataFrame.to_numpy(y)
@@ -76,18 +74,19 @@ total_num_samples = Xnp.shape[0]
 choose_num_samples = 10000
 choose_samples = rnd.permutation(total_num_samples)[:choose_num_samples]  # use random samples of the dataset
 # choose_samples = np.arange(choose_num_samples) # use the first samples of the dataset 
-Xnew = Xnp[:choose_num_samples, :]
-ynew = ynp[:choose_num_samples]
+Xnew = Xnp[choose_samples, :]
+ynew = ynp[choose_samples]
 
 # Normalize features to [0,1]
 Xnew = Xnew / 255;
 
+t1 = time.time()
 #%% Choose algorithm options
 K = 10 # Number of clusters
 [num_samples, num_features] = np.shape(Xnew)
 
-kernel_type = 'polynomial'  # or 'gaussian' or 'euclidean'
-param = 2  # kernel function parameter
+kernel_type = 'gaussian'  # or 'gaussian' or 'euclidean'
+param = 1/100  # kernel function parameter
 
 max_iter = 50    # Maximum number of iterations
 
@@ -137,13 +136,13 @@ idx_ck = np.zeros((num_samples, K), dtype=bool) # which samples belong
 Ck = np.zeros(K, dtype=int)     # no. of samples per cluster
 K3 = np.zeros(K)
 #
-# Similarity matrix including all kernel distances
+# Initialize similarity matrix including all kernel distances
 K_all = np.zeros((num_samples, num_samples), dtype='f4')
 
-#%% Fill the similarity matrix
+#%% Fill in the upper triangular part of the similarity matrix
 for idx_s in np.arange(num_samples):
     K_all[idx_s, idx_s :] = kernel_f(Xnew[idx_s, :], Xnew[idx_s:, :].T, kernel_type, param)
-    # Extend matrix K to symmetric
+# Extend matrix K to symmetric
 for idx_s in np.arange(num_samples):
     K_all[idx_s+1 :, idx_s] = K_all[idx_s, idx_s+1 :]
         
