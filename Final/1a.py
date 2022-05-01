@@ -1,22 +1,19 @@
 # Import the dependencies
 import time
 from math import atan, degrees
-
 import cv2 as cv
-import matplotlib.pyplot as plt
 from numpy import argmin, argmax, array, empty, exp, ma, ndarray, nonzero, histogram, random, zeros
 from numpy.linalg import svd
-# from pandas import DataFrame
-from pandas import DataFrame
-from scipy.sparse.linalg import eigsh
 from scipy.spatial.distance import cdist
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans # to verify the performance
 from sklearn.datasets import fetch_openml
 from sklearn.metrics import homogeneity_score, completeness_score, accuracy_score
 from sklearn.model_selection import train_test_split
+from itertools import combinations
+import random
 
 # Set TRUE for the final version to deliver!
-final = False
+final = True
 
 
 # Some help functions
@@ -33,6 +30,120 @@ def scores(true_labels, labels):
     acc = accuracy_score(true_labels, labels)
 
     return hom, com, acc
+
+
+def cluster_initialization(X, nclusters):
+
+    '''
+    Initialize the clusters by maximizing the Sqeuclidean distance between the centroids
+
+    Parameters:
+    ----------
+    X  (np.ndarray)  data
+    nclusters (int) no of clusters
+    
+    
+    '''
+
+    distance = []
+    positions = []
+    for i in range(nclusters * nclusters):
+        random_positions = random.sample(range(len(X)), nclusters * nclusters)
+        combos = []
+        for i in range(nclusters):
+            combos.append(
+                sum(
+                    [
+                        np.sum((X[indices[0]] - X[indices[1]]) ** 2)
+                        for indices in list(
+                            combinations(random_positions[nclusters * i : nclusters * (i + 1)], 2)
+                        )
+                    ]
+                )
+            )
+            max_index = np.argmax(combos)
+            positions.append(random_positions[nclusters * max_index : nclusters * (max_index + 1)])
+            distance.append(combos[np.argmax(combos)])
+
+    return positions, distance
+
+def kMeans(X: ndarray, y_true, K: int, metric: str):
+    # log('Starting K-means clustering using the metric \'%s\'' % metric)
+
+    # Initialize the centroids c
+    positions, max_distance = cluster_initialization(X, K)
+    c = X[positions[np.argmax(max_distance)]]
+    y = [-1] * N  # Labels
+
+    ePrev = M * N + 1
+    eNew = ePrev - 1
+    while ePrev - eNew > 0:
+        ePrev = eNew
+        eNew = 0
+
+        # Assign x_i to cluster k = argmin_j || x_i - c_j ||
+        for i, x in enumerate(X):
+            if metric == 'gauss':
+                gamma = .001
+                dists = cdist([x], c, 'sqeuclidean')
+                dists = exp(-gamma * dists)
+            else:
+                dists = cdist([x], c, metric)
+            y[i] = argmin(dists)
+
+        # Update the centroid positions
+        for k in range(K):
+            Ck = X[[i for i, yi in enumerate(y) if yi == k]]  # Compute Ck = {x_i where the label y_i = k}
+            if len(Ck) > 0:
+                c[k] = Ck.mean(axis=0)  # Centroid = the mean of the elements/columns in Ck
+                eNew += cdist([c[k]], Ck).sum()  # Compute the error
+            else:
+                # Try to find a good position for this centroid
+                c[k] = c.mean()
+
+    # Determine the accuracy
+    a = 0
+    for k in range(K):
+        Lk = y_true[[i for i, yi in enumerate(y) if yi == k]]  # Lk = {y_true_i : y_i = k}
+        Lk = DataFrame(data=Lk)
+        cnt = Lk.value_counts()
+        cnt = cnt.values
+        if len(cnt) > 0:
+            a += cnt[0]
+    a /= N
+
+    #     showCentroids(c)
+
+    return y, a  # Return the labels
+
+def SVD(data, k = 1e-1, L = None, return_compressed = True, return_L = False):
+
+    """
+    Compute the SVD decomposition
+
+    Parameters:
+    ------
+    data    (np.ndarray)           2D array representing an image
+    k       (float)                threshold to choose the singular values
+    L       (int)                  no. of singular values (degree of compression)
+    return_compressed (bool)       Whether to return the compressed image
+    return_L (bool)                Whether to return the no. of singular values
+
+    Returns:
+    _______
+
+    Returns the compressed image (np.ndarray) as 2D array (or) returns the no. of singular values based on the parameters.
+
+    
+    """
+    
+    U, s, V = np.linalg.svd(data, full_matrices=True)
+    if L == None: 
+        L = sum(s > k)
+    if return_compressed:
+        return U[:, :L] @ np.diag(s)[:L, :L] @ V[:L, :]
+    if return_L:
+        return L
 
 
 # Visualize the given centroids
@@ -88,57 +199,6 @@ print('Frequency per label:\n', y_train.value_counts())
 # Convert the data to arrays
 # X_train = X_train.to_numpy()
 y_train = y_train.to_numpy()
-
-
-def kMeans(X: ndarray, y_true, K: int, metric: str):
-    # log('Starting K-means clustering using the metric \'%s\'' % metric)
-
-    # Randomly initialize the centroids c
-    N, M = X.shape
-    # print(type(X))
-    c = X[random.randint(N, size=K)]
-    y = [-1] * N  # Labels
-
-    ePrev = M * N + 1
-    eNew = ePrev - 1
-    while ePrev - eNew > 0:
-        ePrev = eNew
-        eNew = 0
-
-        # Assign x_i to cluster k = argmin_j || x_i - c_j ||
-        for i, x in enumerate(X):
-            if metric == 'gauss':
-                gamma = .001
-                dists = cdist([x], c, 'sqeuclidean')
-                dists = exp(-gamma * dists)
-            else:
-                dists = cdist([x], c, metric)
-            y[i] = argmin(dists)
-
-        # Update the centroid positions
-        for k in range(K):
-            Ck = X[[i for i, yi in enumerate(y) if yi == k]]  # Compute Ck = {x_i where the label y_i = k}
-            if len(Ck) > 0:
-                c[k] = Ck.mean(axis=0)  # Centroid = the mean of the elements/columns in Ck
-                eNew += cdist([c[k]], Ck).sum()  # Compute the error
-            else:
-                # Try to find a good position for this centroid
-                c[k] = c.mean()
-
-    # Determine the accuracy
-    a = 0
-    for k in range(K):
-        Lk = y_true[[i for i, yi in enumerate(y) if yi == k]]  # Lk = {y_true_i : y_i = k}
-        Lk = DataFrame(data=Lk)
-        cnt = Lk.value_counts()
-        cnt = cnt.values
-        if len(cnt) > 0:
-            a += cnt[0]
-    a /= N
-
-    #     showCentroids(c)
-
-    return y, a  # Return the labels
 
 
 def doCluster(X: ndarray, y, show=True):
@@ -358,17 +418,9 @@ print('The best radius is', r_best,
 # Reprocess the data using the best radius r_best
 X_proc = process(X_train_arr, r_best)
 
-# Test X_proc as the result of process. Is it as expected?
-# img = X_proc.loc[10].values.reshape(28, 28)
-# plt.imshow(img)
-# plt.axis('off')
-# plt.show;
-
-# Show some results
-# show10(X_train, y_train)
-# show10(X_proc, y_train)
 
 # Apply the clustering algorithm on the processed images
 doCluster(X_proc, y_train)
 
-
+# Compress the images using SVD
+compressed = np.array(list(map(lambda x : SVD(x.reshape(28, -1), L = 3).flatten(), X_train_arr)))
