@@ -47,10 +47,8 @@ if __name__ == '__main__':
     )
     parser.add_argument('--sigma2', type=float, nargs='?', default=.1,
                         help="The variance of the noise used by exploration.")
-    parser.add_argument('--n_ep', type=int, nargs='?', default=5,
+    parser.add_argument('--n_ep', type=int, nargs='?', default=30,
                         help="The number of epochs.")
-    parser.add_argument('--n_iter', type=int, nargs='?', default=100,
-                        help="The number of iterations per epoch.")
     parser.add_argument('--lr', type=float, nargs='?', default=5e-3,
                         help="The learning rate.")
     parser.add_argument('--tau', type=float, nargs='?', default=0.01,
@@ -59,12 +57,11 @@ if __name__ == '__main__':
                         help="Batch size.")
 
     args = parser.parse_args()
-    SIGMA2 = args.sigma2  # Noise variance in the received signals
+    # SIGMA2 = args.sigma2  # Noise variance in the received signals
     N_EPOCHS = args.n_ep
-    N_ITER = args.n_iter
-    ACTOR_LR = args.lr
-    TAU = args.tau
-    BATCH_SIZE = args.batch_size
+    LR = args.lr
+    # TAU = args.tau
+    # BATCH_SIZE = args.batch_size
 
     # Read the data
     X = read_csv(fname)
@@ -102,23 +99,32 @@ if __name__ == '__main__':
     # Create a NN
     n_layers = 2
     Ki = 2
-    K = [Ki for i in range(n_layers)]
-    nn = NN(2, 1, n_layers, K)
+    n_per_layer = [Ki for i in range(n_layers)]
+    nn = NN(2, 1, n_layers, n_per_layer, LR)
     # x = pc[0]
     # y_hat = nn(x)
     # print(x, y_hat)
 
     # Train the NN
+    in_vals = np.zeros((N_EPOCHS, 2))
+    losses = []
+    min_loss = float('inf')
+    best_in = None
     for ep in range(N_EPOCHS):
         # x = pc[0:4]
         # y_true = y[0:4]
         x = pc[0]
         y_true = y[0]
         y_hat = nn(x.T)
-        print(f'Ep. {ep} | loss:', loss(y_hat, y_true))
+        in_vals[ep] = x
+        l = loss(y_hat, y_true)
+        losses.append(l)
+        if l < min_loss:
+            min_loss = l
+            best_in = x
 
-    in_vals = [1, 2]
-    best_in = 1
-    rewards = [2.9, 1.6]
-    cur_it = 2
-    plot_result(in_vals, best_in, rewards, cur_it, N_EPOCHS, N_ITER)
+        print(f'Ep. {ep} | loss:', loss(y_hat, y_true))
+        nn.learn(y_true)
+
+        # Show the progress/learning
+        plot_result(in_vals, best_in[0], losses, ep+1, N_EPOCHS, 1)
