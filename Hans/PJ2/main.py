@@ -3,10 +3,10 @@ import csv
 
 import matplotlib.pyplot as plt
 import numpy as np
+from nn import NN
 from progressPlotter import plot_result
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-from nn import NN
 
 fname = '../heart.csv'
 
@@ -39,22 +39,53 @@ def loss(y, y_true):
     return mse(y, y_true)
 
 
+# Train the NN
+def train(nn, pc, y, n_epochs):
+    in_vals = np.zeros((n_epochs, 2))
+    losses = []
+    min_loss = float('inf')
+    best_in = None
+    n = len(pc)
+    for ep in range(n_epochs):
+        # x = pc[0:4]
+        # y_true = y[0:4]
+        # Select the i-th sample
+        i = np.random.randint(n)
+        x = pc[i]
+        y_true = y[i]
+
+        y_hat = nn(x.T)  # Feed-forward
+
+        in_vals[ep] = x  # Record the values
+        l = loss(y_hat, y_true)
+        losses.append(l)
+        if l < min_loss:
+            min_loss = l
+            best_in = x
+
+        print(f'Ep. {ep} | loss:', loss(y_hat, y_true))
+        nn.learn(y_true)
+
+        # Show the progress/learning
+        plot_result(in_vals, best_in[0], losses, ep + 1, 1, N_EPOCHS)
+
+
 if __name__ == '__main__':
     # Get the program parameters
     parser = argparse.ArgumentParser(
         prog="Project 2 | Neural Network Simulation",
         description="A neural network is implemented & tested on the data in heart.csv for different network topologies."
     )
-    parser.add_argument('--sigma2', type=float, nargs='?', default=.1,
-                        help="The variance of the noise used by exploration.")
-    parser.add_argument('--n_ep', type=int, nargs='?', default=30,
+    # parser.add_argument('--sigma2', type=float, nargs='?', default=.1,
+    #                     help="The variance of the noise used by exploration.")
+    parser.add_argument('--n_ep', type=int, nargs='?', default=100,
                         help="The number of epochs.")
     parser.add_argument('--lr', type=float, nargs='?', default=5e-3,
                         help="The learning rate.")
-    parser.add_argument('--tau', type=float, nargs='?', default=0.01,
-                        help="Weights update parameter.")
-    parser.add_argument('--batch_size', type=int, nargs='?', default=64,
-                        help="Batch size.")
+    # parser.add_argument('--tau', type=float, nargs='?', default=0.01,
+    #                     help="Weights update parameter.")
+    # parser.add_argument('--batch_size', type=int, nargs='?', default=64,
+    #                     help="Batch size.")
 
     args = parser.parse_args()
     # SIGMA2 = args.sigma2  # Noise variance in the received signals
@@ -68,7 +99,7 @@ if __name__ == '__main__':
 
     # Split the data in to the samples and labels
     X = np.array(X)
-    y = X[:, 13]        # Labels
+    y = X[:, 13]  # Labels
     X = X[:, :13]
     print('X.shape:', X.shape)
 
@@ -101,30 +132,5 @@ if __name__ == '__main__':
     Ki = 2
     n_per_layer = [Ki for i in range(n_layers)]
     nn = NN(2, 1, n_layers, n_per_layer, LR)
-    # x = pc[0]
-    # y_hat = nn(x)
-    # print(x, y_hat)
 
-    # Train the NN
-    in_vals = np.zeros((N_EPOCHS, 2))
-    losses = []
-    min_loss = float('inf')
-    best_in = None
-    for ep in range(N_EPOCHS):
-        # x = pc[0:4]
-        # y_true = y[0:4]
-        x = pc[0]
-        y_true = y[0]
-        y_hat = nn(x.T)
-        in_vals[ep] = x
-        l = loss(y_hat, y_true)
-        losses.append(l)
-        if l < min_loss:
-            min_loss = l
-            best_in = x
-
-        print(f'Ep. {ep} | loss:', loss(y_hat, y_true))
-        nn.learn(y_true)
-
-        # Show the progress/learning
-        plot_result(in_vals, best_in[0], losses, ep+1, N_EPOCHS, 1)
+    train(nn, pc, y, N_EPOCHS)
