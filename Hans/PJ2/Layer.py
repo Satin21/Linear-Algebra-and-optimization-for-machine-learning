@@ -58,8 +58,12 @@ def normalize_dash(x):  # Normalization derivative
 
 
 class Layer:
-    def __init__(self, n, n_prev, activation='relu', lr=.01):
-        self.lr = lr   # Set the learning rate
+    def __init__(self, n, n_prev, activation='relu', lr=.01, beta1=.9, beta2=.99):
+        self.lr = lr  # Set the learning rate
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.beta1_t = 1.  # = pow(beta1, t) in the t-th iteration/call of compute_grad()
+        self.beta2_t = 1.
 
         # Set the activation function
         act_map = {'relu': relu, 'sigmoid': sigmoid, None: identity}
@@ -77,6 +81,10 @@ class Layer:
         self.b = np.zeros((n, 1))
         self.grad_W = None
         self.grad_b = None
+        self.W_m = np.zeros((n, n_prev))
+        self.W_v = np.zeros((n, n_prev))
+        self.b_m = np.zeros((n, 1))
+        self.b_v = np.zeros((n, 1))
 
     # Propagate the input data through this layer & return the result
     def __call__(self, x):
@@ -93,31 +101,24 @@ class Layer:
     # Inspired by https://medium.com/@neuralthreads/backpropagation-made-super-easy-for-you-part-1-6fb4aa5a0aaf
     # TODO Implement ADAM GD, see p.105
     def compute_grad(self, err_grad):
-        self.grad_W = err_grad * self.activate_dash(self.last_out).dot(self.last_in.T)
-        self.grad_b = err_grad * self.activate_dash(self.last_out)
+        grad_W = err_grad * self.activate_dash(self.last_out).dot(self.last_in.T)
+        grad_b = err_grad * self.activate_dash(self.last_out)
         new_err_grad = np.sum(err_grad * self.activate_dash(self.last_out) * self.W, axis=0).reshape((-1, 1))
+
+        self.W_m = self.beta1 * self.W_m + (1 - self.beta1) * grad_W
+        self.W_v = self.beta2 * self.W_v + (1 - self.beta2) * np.square(grad_W)
+        self.b_m = self.beta1 * self.b_m + (1 - self.beta1) * grad_b
+        self.b_v = self.beta2 * self.b_v + (1 - self.beta2) * np.square(grad_b)
 
         return new_err_grad
 
     def update_weights(self):
-        self.W += -self.lr * self.grad_W
-        self.b += -self.lr * self.grad_b
-
-    # def learn(self, lr):
-    #     grad_w = mse_grad(y, y_hat) * sig_dash(in_output_layer).dot(out_hidden_2.T)
-    #     # self.W += -lr * grad_w
-    #     grad_b = mse_grad(y, y_hat) * sig_dash(in_output_layer)
-    #     # self.b += -lr * grad_b
-    #
-    #     error_grad_upto_H2 = np.sum(mse_grad(y, y_hat) * sig_dash(in_output_layer) * w3, axis=0).reshape(
-    #         (-1, 1))  # error grad up to H2
-    #
-    #     grad_w2 = error_grad_upto_H2 * sig_dash(in_hidden_2).dot(out_hidden_1.T)  # grad w2
-    #     grad_b2 = error_grad_upto_H2 * sig_dash(in_hidden_2)  # grad b2
-    #
-    #     error_grad_upto_H1 = np.sum(error_grad_upto_H2 * sig_dash(in_hidden_2) * w2, axis=0).reshape(
-    #         (-1, 1))  # error grad up to H1
-    #
-    #     grad_w1 = error_grad_upto_H1 * relu_dash(in_hidden_1).dot(x.T)  # grad w1
-    #
-    #     grad_b1 = error_grad_upto_H1 * relu_dash(in_hidden_1)  # grad b1
+        self.beta1_t *= self.beta1
+        self.beta1_t *= self.beta2
+        W_m_hat = self.W_m / (1 - self.beta1_t)
+        W_v_hat = self.W_v / (1 - self.beta2_t)
+        b_m_hat = self.b_m / (1 - self.beta1_t)
+        b_v_hat = self.b_v / (1 - self.beta2_t)
+        eps = 1E-6
+        self.W += -self.lr / (np.sqrt(W_v_hat) + eps) * W_m_hat
+        self.b += -self.lr / (np.sqrt(b_v_hat) + eps) * b_m_hat

@@ -40,13 +40,13 @@ def loss(y, y_true):
 
 
 # Train the NN
-def train(nn, pc, y, n_epochs):
-    in_vals = np.zeros((n_epochs, 2))
+def train(nn, pc, y):
+    in_vals = np.zeros((N_EPOCHS, 2))
     losses = []
     min_loss = float('inf')
     best_in = None
     n = len(pc)
-    for ep in range(n_epochs):
+    for ep in range(N_EPOCHS):
         # x = pc[0:4]
         # y_true = y[0:4]
         # Select the i-th sample
@@ -55,7 +55,8 @@ def train(nn, pc, y, n_epochs):
         y_true = y[i]
 
         y_hat = nn(x.T)  # Feed-forward
-
+        # y_hat = nn(pc.T)  # Feed-forward
+        # print(y_hat)
         in_vals[ep] = x  # Record the values
         l = loss(y_hat, y_true)
         losses.append(l)
@@ -67,7 +68,11 @@ def train(nn, pc, y, n_epochs):
         nn.learn(y_true)
 
         # Show the progress/learning
-        plot_result(in_vals, best_in[0], losses, ep + 1, 1, N_EPOCHS)
+        plot_result(rewards=losses, cur_it=ep + 1, n_iter=N_EPOCHS)
+
+
+def pdf2cdf(x):
+    return np.pad(np.cumsum(x), (1, 0), mode='constant')
 
 
 if __name__ == '__main__':
@@ -78,7 +83,7 @@ if __name__ == '__main__':
     )
     # parser.add_argument('--sigma2', type=float, nargs='?', default=.1,
     #                     help="The variance of the noise used by exploration.")
-    parser.add_argument('--n_ep', type=int, nargs='?', default=100,
+    parser.add_argument('--n_ep', type=int, nargs='?', default=200,
                         help="The number of epochs.")
     parser.add_argument('--lr', type=float, nargs='?', default=5e-3,
                         help="The learning rate.")
@@ -104,8 +109,8 @@ if __name__ == '__main__':
     print('X.shape:', X.shape)
 
     X = mean_centered(X)
-    Cxx = cov_mat(X)
-    print('Cxx.shape:', Cxx.shape)
+    # Cxx = cov_mat(X)
+    # print('Cxx.shape:', Cxx.shape)
 
     # Scale the input data/features
     sc = StandardScaler()
@@ -114,7 +119,19 @@ if __name__ == '__main__':
     # Do the PCA
     pca = PCA(n_components=2)
     pc = pca.fit_transform(X)  # Compute the principal components & transform the data
-    print('explained_variance:', pca.explained_variance_ratio_)
+    print('explained variance:', pca.explained_variance_)
+    print('explained variance ratio:', pca.explained_variance_ratio_, sum(pca.explained_variance_ratio_))
+
+    # CDF
+    cdf = pdf2cdf(pca.explained_variance_ratio_)
+
+    # Plot the CDF
+    plt.plot(cdf, '.-')
+    plt.title('Explained Variance CDF')
+    plt.xlabel('#Principal Components')
+    plt.ylabel('CDF')
+    plt.grid()
+    # plt.show()
     print(pc.shape)
 
     # Plot the transformed data
@@ -133,4 +150,4 @@ if __name__ == '__main__':
     n_per_layer = [Ki for i in range(n_layers)]
     nn = NN(2, 1, n_layers, n_per_layer, LR)
 
-    train(nn, pc, y, N_EPOCHS)
+    train(nn, pc, y)
