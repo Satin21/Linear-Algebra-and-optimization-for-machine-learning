@@ -40,7 +40,9 @@ def loss(y, y_true):
 
 
 # Train the NN
-def train(nn, pc, y):
+def train(nn: NN, pc, y):
+    # TODO: time it
+
     in_vals = np.zeros((N_EPOCHS, 2))
     losses = []
     min_loss = float('inf')
@@ -64,7 +66,7 @@ def train(nn, pc, y):
             min_loss = l
             best_in = x
 
-        print(f'Ep. {ep} | loss:', loss(y_hat, y_true))
+        print(f'Ep. {ep} | loss:', l)
         nn.learn(y_true)
 
         # Show the progress/learning
@@ -126,7 +128,7 @@ if __name__ == '__main__':
     cdf = pdf2cdf(pca.explained_variance_ratio_)
 
     # Plot the CDF
-    plt.plot(cdf, '.-')
+    # plt.plot(cdf, '.-')
     plt.title('Explained Variance CDF')
     plt.xlabel('#Principal Components')
     plt.ylabel('CDF')
@@ -142,11 +144,11 @@ if __name__ == '__main__':
     plt.title('Reduced Feature Space')
     plt.xlabel('Principal Component 1')
     plt.ylabel('Principal Component 2')
-    # plt.show()
+    plt.show()
 
     # Create a NN
-    n_layers = 2
-    Ki = 2
+    n_layers = 2  # #layers
+    Ki = 2  # #neurons per layer
     n_per_layer = [Ki for i in range(n_layers)]
     nn = NN(2, 1, n_layers, n_per_layer, LR)
 

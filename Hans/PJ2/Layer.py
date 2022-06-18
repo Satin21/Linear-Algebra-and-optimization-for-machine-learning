@@ -1,38 +1,38 @@
 import numpy as np
 
 
-def sigmoid(x):
+def _sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
 
-def sigmoid_dash(x):  # Sigmoid derivative
+def _sigmoid_der(x):  # Sigmoid derivative
     y = sigmoid(x)
     return y * (1 - y)
 
 
-def relu(x, leak=0):  # ReLU
+def _relu(x, leak=0):  # ReLU
     return np.where(x <= 0, leak * x, x)
 
 
-def relu_dash(x, leak=0):  # ReLU derivative
+def _relu_der(x, leak=0):  # ReLU derivative
     return np.where(x <= 0, leak, 1)
 
 
-def identity(x):
+def _identity(x):
     return x
 
 
-def mse(y_true, y_pred):  # MSE
+def _mse(y_true, y_pred):  # MSE
     return np.mean((y_true - y_pred) ** 2)
 
 
-def mse_grad(y_true, y_pred):  # MSE derivative
+def _mse_der(y_true, y_pred):  # MSE derivative
     N = y_true.shape[0]
 
     return 2 * (y_pred - y_true) / N
 
 
-def normalize(x):  # Layer Normalization
+def _normalize(x):  # Layer Normalization
     mean = x.mean()
     std = x.std()
 
@@ -48,7 +48,7 @@ def normalize(x):  # Layer Normalization
 
 
 # From https://medium.com/@neuralthreads/layer-normalization-applied-on-a-neural-network-f6ad51341726
-def normalize_dash(x):  # Normalization derivative
+def _normalize_der(x):  # Normalization derivative
     N = len(x)
     I = np.eye(N)
     mean = x.mean()
@@ -58,7 +58,7 @@ def normalize_dash(x):  # Normalization derivative
 
 
 class Layer:
-    def __init__(self, n, n_prev, activation='relu', lr=.01, beta1=.9, beta2=.99):
+    def __init__(self, n, n_prev, activation='relu', lr=.01, beta1=.9, beta2=.999):
         self.lr = lr  # Set the learning rate
         self.beta1 = beta1
         self.beta2 = beta2
@@ -66,13 +66,13 @@ class Layer:
         self.beta2_t = 1.
 
         # Set the activation function
-        act_map = {'relu': relu, 'sigmoid': sigmoid, None: identity}
+        act_map = {'relu': _relu, 'sigmoid': _sigmoid, None: _identity}
         if activation not in act_map:
             ValueError('Activation function ' + self.activation + ' is unknown.')
         self.activate = act_map[activation]
 
         # Set the derivative thereof
-        act_dash_map = {'relu': relu_dash, 'sigmoid': sigmoid_dash, None: identity}
+        act_dash_map = {'relu': _relu_der, 'sigmoid': _sigmoid_der, None: _identity}
         self.activate_dash = act_dash_map[activation]
 
         # Initialize W and b (normalized initialization on W)

@@ -13,7 +13,7 @@ def mse_grad(y_true, y_pred):  # MSE derivative
 
 
 class NN:
-    def __init__(self, n_in, n_out, n_layers, n_per_layer, lr=.01, batch_size=16):
+    def __init__(self, n_in: int, n_out: int, n_layers: int, n_per_layer: list, lr=.01, batch_size=16):
         # self.batch_size = batch_size
 
         # Define the NN
@@ -25,7 +25,7 @@ class NN:
         self.layers.append(Layer(n_out, n_per_layer[n_layers - 1], None, lr=lr))  # The output layer
 
     # Propagate the input x through the network
-    def __call__(self, x):
+    def __call__(self, x: list):
         # print(x.shape)
         if len(x.shape) == 1:
             x = np.reshape(x, (len(x), 1))
@@ -40,7 +40,8 @@ class NN:
         # Compute the gradients
         err_grad = mse_grad(y_true, self.y_hat)
         for l in self.layers:
-            l.compute_grad(err_grad)
+            print('err_grad:', err_grad)
+            err_grad = l.compute_grad(err_grad)  # TODO: use err_grad correctly for back-propagation through the layers
 
         # Update all weights
         for l in self.layers:
