@@ -6,7 +6,7 @@ def _sigmoid(x):
 
 
 def _sigmoid_der(x):  # Sigmoid derivative
-    y = sigmoid(x)
+    y = _sigmoid(x)
     return y * (1 - y)
 
 
@@ -72,12 +72,12 @@ class Layer:
         self.activate = act_map[activation]
 
         # Set the derivative thereof
-        act_dash_map = {'relu': _relu_der, 'sigmoid': _sigmoid_der, None: _identity}
-        self.activate_dash = act_dash_map[activation]
+        act_der_map = {'relu': _relu_der, 'sigmoid': _sigmoid_der, None: _identity}
+        self.activate_der = act_der_map[activation]
 
         # Initialize W and b (normalized initialization on W)
-        u = np.sqrt(6 / (n + n_prev))
-        self.W = np.random.uniform(-u, u, (n, n_prev))
+        u = np.sqrt(6. / (n + n_prev))
+        self.W = np.random.uniform(-u, u, (n, n_prev))  # TODO: init depending on the activation function
         self.b = np.zeros((n, 1))
         self.grad_W = None
         self.grad_b = None
@@ -88,22 +88,22 @@ class Layer:
 
     # Propagate the input data through this layer & return the result
     def __call__(self, x):
-        # x = normalize(x)
+        # x = normalize(x)  # TODO: Normalization would be nice
         # print(self.W @ x)
         self.last_in = x
         self.last_out = self.W @ x + self.b
         y = self.activate(self.last_out)
         if len(y) == 1:
-            return y[0, 0]
+            return y[0]
         return y
 
     # Compute the gradient of the loss function w.r.t. the parameters.
     # Inspired by https://medium.com/@neuralthreads/backpropagation-made-super-easy-for-you-part-1-6fb4aa5a0aaf
     # TODO Implement ADAM GD, see p.105
     def compute_grad(self, err_grad):
-        grad_W = err_grad * self.activate_dash(self.last_out).dot(self.last_in.T)
-        grad_b = err_grad * self.activate_dash(self.last_out)
-        new_err_grad = np.sum(err_grad * self.activate_dash(self.last_out) * self.W, axis=0).reshape((-1, 1))
+        grad_W = err_grad * self.activate_der(self.last_out).dot(self.last_in.T)
+        grad_b = err_grad * self.activate_der(self.last_out)
+        new_err_grad = np.sum(err_grad * self.activate_der(self.last_out) * self.W, axis=0).reshape((-1, 1))
 
         self.W_m = self.beta1 * self.W_m + (1 - self.beta1) * grad_W
         self.W_v = self.beta2 * self.W_v + (1 - self.beta2) * np.square(grad_W)
