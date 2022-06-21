@@ -56,7 +56,7 @@ def cluster_initialization(X, nclusters):
     for i in range(nclusters * nclusters):
         random_positions = random.sample(range(len(X)), nclusters * nclusters)
         combos = []
-        for i in range(10):
+        for i in range(nclusters):
             combos.append(
                 sum(
                     [

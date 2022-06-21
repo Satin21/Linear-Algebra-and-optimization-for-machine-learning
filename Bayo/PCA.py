@@ -25,7 +25,7 @@ from sklearn.metrics import roc_curve, roc_auc_score
 #     return df
 
 # train_df = read_data('train_data.csv')
-train_df = pd.read_csv('train_data.csv', header=0, parse_dates=['Timestamp'], index_col='Timestamp', dayfirst=True)
+train_df = pd.read_csv('../heart.csv', header=0, parse_dates=['Timestamp'], index_col='Timestamp', dayfirst=True)
 train_df.index = pd.DatetimeIndex(train_df.index.values, freq = train_df.index.inferred_freq)
 
 train_df.drop('Id',axis=1,inplace=True)

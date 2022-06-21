@@ -65,6 +65,26 @@ def mostFrequent(arr):
          
     return res, max_count
 
+def mostFrequent(arr):
+    n = len(arr)
+    # Insert all elements in Hash.
+    Hash = dict()
+    for i in range(n):
+        if arr[i] in Hash.keys():
+            Hash[arr[i]] += 1
+        else:
+            Hash[arr[i]] = 1
+            
+    # find the max frequency
+    max_count = 0
+    res = -1
+    for i in Hash:
+        if (max_count < Hash[i]):
+            res = i
+            max_count = Hash[i]
+         
+    return res, max_count
+
 # SVD function
 def SVD(data, k = 1e-1, L = None, return_compressed = True, return_L = False):
 
