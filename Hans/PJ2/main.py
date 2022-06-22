@@ -1,5 +1,6 @@
 import argparse
 import csv
+import time
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -42,14 +43,15 @@ def loss(y, y_true):
 
 # Train the NN
 def train(nn: NN, pc: list, y: list):
-    # TODO: time it
+    # Record the starting time to determine the runtime
+    t0 = time.time()
 
+    # Init variables
     losses = []
     min_loss = float('inf')
     n = len(pc)
     for ep in range(N_EPOCHS):
-        # x = pc[0:4]
-        # y_true = y[0:4]
+
         # Select the i-th sample
         i = np.random.randint(n)
         x = pc[i]
@@ -57,7 +59,7 @@ def train(nn: NN, pc: list, y: list):
 
         # TODO: Use the whole data set
         y_hat = nn(x.T)  # Feed-forward
-        # y_hat = nn(pc.T)  # Feed-forward
+        # y_hat = nn(pc.T)  # Feed-forward all samples
         # print(y_hat)
         l = loss(y_hat, y_true)
         losses.append(l)
@@ -72,13 +74,17 @@ def train(nn: NN, pc: list, y: list):
 
 
 # TODO: Validate (using the validation set)
-def validate(nn: NN, X: list, Y: list):
-    pass
+def validate(nn: NN, X: list, y_true: list):
+    y_pred = nn(X)
+    a = get_accuracy(y_true, y_pred)
+    print("Validation accuracy {:.2f}".format(a))
 
 
 # TODO: Test (using the test set)
-def test(nn: NN, X: list, Y: list):
-    pass
+def test(nn: NN, X: list, y_true: list):
+    y_pred = nn(X)
+    a = get_accuracy(y_true, y_pred)
+    print("Test accuracy {:.2f}".format(a))
 
 
 # Split the data into training and validation data
@@ -88,33 +94,54 @@ def split_data(X: list, Y: list, test_size: float):
     return train_test_split(X, Y, stratify=Y, test_size=test_size)
 
 
-def pdf2cdf(x):
+def pdf2cdf(x: list):
     return np.pad(np.cumsum(x), (1, 0), mode='constant')
 
 
-if __name__ == '__main__':
-    # Get the program parameters
-    parser = argparse.ArgumentParser(
-        prog="Project 2 | Neural Network Simulation",
-        description="A neural network is implemented & tested on the data in heart.csv for different network topologies."
-    )
-    # parser.add_argument('--sigma2', type=float, nargs='?', default=.1,
-    #                     help="The variance of the noise used by exploration.")
-    parser.add_argument('--n_ep', type=int, nargs='?', default=200,
-                        help="The number of epochs.")
-    parser.add_argument('--lr', type=float, nargs='?', default=5e-3,
-                        help="The learning rate.")
-    # parser.add_argument('--tau', type=float, nargs='?', default=0.01,
-    #                     help="Weights update parameter.")
-    # parser.add_argument('--batch_size', type=int, nargs='?', default=64,
-    #                     help="Batch size.")
+# Plot the CDF
+def plot_cdf(X: list):
+    # Do the PCA
+    n_features = len(X[0])
+    pca = PCA(n_components=n_features)
+    pca.fit_transform(X)  # Compute the principal components & transform the data
+    cdf = pdf2cdf(pca.explained_variance_ratio_)
 
-    args = parser.parse_args()
-    # SIGMA2 = args.sigma2  # Noise variance in the received signals
-    N_EPOCHS = args.n_ep
-    LR = args.lr
-    # TAU = args.tau
-    # BATCH_SIZE = args.batch_size
+    plt.plot(cdf, '.-')
+    plt.title('Explained Variance CDF')
+    plt.xlabel('#Principal Components')
+    plt.ylabel('CDF')
+    plt.grid()
+    plt.show()
+
+
+# Plot the transformed data set X, i.e. the principal components
+def plot_x_transformed(pc, Y):
+    pc1 = pc[Y == 1, :]
+    pc2 = pc[Y == -1, :]
+    plt.plot(pc1[:, 0], pc1[:, 1], '.')
+    plt.plot(pc2[:, 0], pc2[:, 1], '.')
+    plt.title('Reduced Feature Space')
+    plt.xlabel('Principal Component 1')
+    plt.ylabel('Principal Component 2')
+    plt.legend(['Sick', 'Healthy'])
+    plt.show()
+
+
+# Determine the accuracy, i.e. the percentage of labels predicted correctly
+def get_accuracy(y_true, y_pred):
+    a = 0
+    for k in range(K):
+        Lk = y_true[[i for i, yi in enumerate(y_pred) if yi == k]]  # Lk = {y_true_i : y_i = k}
+        Lk = DataFrame(data=Lk)
+        cnt = Lk.value_counts()
+        cnt = cnt.values
+        if len(cnt) > 0:
+            a += cnt[0]
+    return a / N
+
+
+if __name__ == '__main__':
+    N_EPOCHS = 500
 
     # Read the data
     X = read_csv(fname)
@@ -139,37 +166,26 @@ if __name__ == '__main__':
     print('explained variance:', pca.explained_variance_)
     print('explained variance ratio:', pca.explained_variance_ratio_, sum(pca.explained_variance_ratio_))
 
-    # CDF
-    cdf = pdf2cdf(pca.explained_variance_ratio_)
+    # plot_cdf(X)
+    # plot_x_transformed(pc, Y)
 
-    # Plot the CDF
-    # plt.plot(cdf, '.-')
-    plt.title('Explained Variance CDF')
-    plt.xlabel('#Principal Components')
-    plt.ylabel('CDF')
-    plt.grid()
-    # plt.show()
-    print(pc.shape)
+    lr_set = [.11, .05, .01]
+    Ki_set = [2, 5, 10]
+    N_set = [2, 5, 10]
 
-    # Plot the transformed data
-    pc1 = pc[Y == 1, :]
-    pc2 = pc[Y == -1, :]
-    plt.plot(pc1[:, 0], pc1[:, 1], '.')
-    plt.plot(pc2[:, 0], pc2[:, 1], '.')
-    plt.title('Reduced Feature Space')
-    plt.xlabel('Principal Component 1')
-    plt.ylabel('Principal Component 2')
-    plt.legend(['Sick', 'Healthy'])
-    #plt.show()
+    for lr in lr_set:
+        for Ki in Ki_set:  # #neurons per layer
+            for N in N_set:  # #leyare
 
-    # Create a NN
-    n_layers = 2  # #layers
-    Ki = 2  # #neurons per layer
-    n_per_layer = [Ki for i in range(n_layers)]
-    nn = NN(2, 1, n_layers, n_per_layer, lr=LR)
+                # Create a NN
+                n_per_layer = [Ki for i in range(N)]
+                nn = NN(2, 1, N, n_per_layer, lr=lr)
 
-    x_val, y_val, x_test, y_test = split_data(X, Y, 0.75)
+                x_val, y_val, x_test, y_test = split_data(X, Y, 0.75)
 
-    train(nn, pc, Y)
-    validate(nn, x_val, y_val)
-    test(nn, x_test, y_test)
+                train(nn, pc, Y)
+                # validate(nn, x_val, y_val)
+                test(nn, x_test, y_test)
+                break
+            break
+        break

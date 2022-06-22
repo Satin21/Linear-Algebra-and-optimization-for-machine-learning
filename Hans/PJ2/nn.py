@@ -15,7 +15,7 @@ def mse_grad(y_true, y_pred):  # MSE derivative
 # Compute the gradient/derivative of the binary regression loss function
 # loss = sum [ y_true * log(y_pred) + (1 - y_true) * log(1 - y_pred) ]
 def loss_der(y_true, y_pred):
-    return sum(y_true // y_pred - (1 - y_true) // (1 - y_pred))
+    return -sum(y_true // y_pred - (1 - y_true) // (1 - y_pred))
 
 
 class NN:
@@ -31,7 +31,7 @@ class NN:
             self.layers.append(
                 Layer(n_per_layer[i], n_per_layer[i - 1], hidden_activation, lr=lr))  # Define the other hidden layers
         self.layers.append(
-            Layer(n_out, n_per_layer[n_layers - 1], out_activation, lr=lr))  # TODO: activation = None? The output layer
+            Layer(n_out, n_per_layer[n_layers - 1], out_activation, lr=lr))
 
     # Propagate the input x through the network
     def __call__(self, x: np.ndarray):
@@ -39,9 +39,13 @@ class NN:
         # Ensure that x is a vector to process it in the layers
         if len(x.shape) == 1:
             x = np.reshape(x, (len(x), 1))
+
+        # Do the forward propagations
         for layer in self.layers:
             x = layer(x)
-        self.y_hat = x
+
+        # The output
+        self.y_pred = x
 
         return x
 
@@ -49,13 +53,10 @@ class NN:
     def learn(self, y_true):
 
         # Compute the gradients
-        # err_grad = mse_grad(y_true, self.y_hat)  # TODO: change the loss function and define the corresponding gradient
-        err_grad = loss_der(y_true, self.y_hat)  # TODO: change the loss function and define the corresponding gradient
-        for layer in self.layers:
-            print('err_grad:', err_grad)
-            err_grad = layer.compute_grad(
-                err_grad)  # TODO: use err_grad correctly for back-propagation through the layers
+        err_grad = loss_der(y_true, self.y_pred)
+        for layer in reversed(self.layers):
+            err_grad = layer.compute_grad(err_grad)  # TODO: use err_grad correctly for back-propagation through the layers
 
         # Update all weights
-        for l in self.layers:
-            l.update_weights()
+        for layer in self.layers:
+            layer.update_weights()

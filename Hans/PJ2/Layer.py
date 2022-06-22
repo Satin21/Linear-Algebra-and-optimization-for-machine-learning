@@ -58,6 +58,16 @@ def _normalize_der(x):  # Normalization derivative
 
 
 class Layer:
+    def __init_weights(self, n, n_prev, activation):
+
+        # Initialize W and b (normalized initialization on W)
+        if activation == 'sigmoid':
+            u = np.sqrt(6. / (n + n_prev))
+        elif activation == 'relu':
+            u = 1. / np.sqrt(n)
+        self.W = np.random.uniform(-u, u, (n, n_prev))
+        self.b = np.zeros((n, 1))
+
     def __init__(self, n, n_prev, activation='relu', lr=.01, beta1=.9, beta2=.999):
         self.lr = lr  # Set the learning rate
         self.beta1 = beta1
@@ -75,10 +85,7 @@ class Layer:
         act_der_map = {'relu': _relu_der, 'sigmoid': _sigmoid_der, None: _identity}
         self.activate_der = act_der_map[activation]
 
-        # Initialize W and b (normalized initialization on W)
-        u = np.sqrt(6. / (n + n_prev))
-        self.W = np.random.uniform(-u, u, (n, n_prev))  # TODO: init depending on the activation function
-        self.b = np.zeros((n, 1))
+        self.__init_weights(n, n_prev, activation)
         self.grad_W = None
         self.grad_b = None
         self.W_m = np.zeros((n, n_prev))
@@ -90,9 +97,9 @@ class Layer:
     # TODO: propagate a list of samples
     def __call__(self, x):
         # x = normalize(x)  # TODO: Normalization would be nice
-        self.last_in = x
-        self.last_out = self.W @ x + self.b
-        y = self.activate(self.last_out)
+        self.last_z = self.W @ x + self.b
+        self.last_out = self.activate(self.last_z)
+        y = self.last_out
         if len(y) == 1:
             return y[0]
         return y
@@ -101,13 +108,12 @@ class Layer:
     # Inspired by https://medium.com/@neuralthreads/backpropagation-made-super-easy-for-you-part-1-6fb4aa5a0aaf
     # ADAM GD, see e.g. p.105 of the lecture notes
     def compute_grad(self, err_grad):
-        a_der = self.activate_der(self.last_in)
-        grad_b = err_grad * a_der
-        grad_W = grad_b @ self.last_in.T
-        new_err_grad = self.W @ grad_b
+        grad_b = err_grad * self.activate_der(self.last_z)
+        grad_W = grad_b @ self.last_out.T
+        new_err_grad = self.W.T @ grad_b
 
-        self.W_m = self.beta1 * self.W_m + (1 - self.beta1) * grad_W.T
-        self.W_v = self.beta2 * self.W_v + (1 - self.beta2) * np.square(grad_W.T)
+        self.W_m = self.beta1 * self.W_m + (1 - self.beta1) * grad_W
+        self.W_v = self.beta2 * self.W_v + (1 - self.beta2) * np.square(grad_W)
         self.b_m = self.beta1 * self.b_m + (1 - self.beta1) * grad_b
         self.b_v = self.beta2 * self.b_v + (1 - self.beta2) * np.square(grad_b)
 
@@ -121,6 +127,5 @@ class Layer:
         b_m_hat = self.b_m / (1 - self.beta1_t)
         b_v_hat = self.b_v / (1 - self.beta2_t)
         eps = 1E-8
-        print(W_v_hat, W_m_hat, self.W)
         self.W += -self.lr / (np.sqrt(W_v_hat) + eps) * W_m_hat
         self.b += -self.lr / (np.sqrt(b_v_hat) + eps) * b_m_hat
