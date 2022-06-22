@@ -166,7 +166,7 @@ if __name__ == '__main__':
     n_layers = 2  # #layers
     Ki = 2  # #neurons per layer
     n_per_layer = [Ki for i in range(n_layers)]
-    nn = NN(2, 1, n_layers, n_per_layer, LR)
+    nn = NN(2, 1, n_layers, n_per_layer, lr=LR)
 
     x_val, y_val, x_test, y_test = split_data(X, Y, 0.75)
 

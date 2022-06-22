@@ -68,7 +68,7 @@ class Layer:
         # Set the activation function
         act_map = {'relu': _relu, 'sigmoid': _sigmoid, None: _identity}
         if activation not in act_map:
-            ValueError('Activation function ' + self.activation + ' is unknown.')
+            ValueError('Activation function', activation, 'is unknown.')
         self.activate = act_map[activation]
 
         # Set the derivative thereof
@@ -87,9 +87,9 @@ class Layer:
         self.b_v = np.zeros((n, 1))
 
     # Propagate the input data through this layer & return the result
+    # TODO: propagate a list of samples
     def __call__(self, x):
         # x = normalize(x)  # TODO: Normalization would be nice
-        # print(self.W @ x)
         self.last_in = x
         self.last_out = self.W @ x + self.b
         y = self.activate(self.last_out)
@@ -99,14 +99,15 @@ class Layer:
 
     # Compute the gradient of the loss function w.r.t. the parameters.
     # Inspired by https://medium.com/@neuralthreads/backpropagation-made-super-easy-for-you-part-1-6fb4aa5a0aaf
-    # TODO Implement ADAM GD, see p.105
+    # ADAM GD, see e.g. p.105 of the lecture notes
     def compute_grad(self, err_grad):
-        grad_W = err_grad * self.activate_der(self.last_out).dot(self.last_in.T)
-        grad_b = err_grad * self.activate_der(self.last_out)
-        new_err_grad = np.sum(err_grad * self.activate_der(self.last_out) * self.W, axis=0).reshape((-1, 1))
+        a_der = self.activate_der(self.last_in)
+        grad_W = err_grad * a_der.dot(self.last_out.T)
+        grad_b = err_grad * a_der
+        new_err_grad = np.sum(err_grad * a_der * self.W, axis=0).reshape((-1, 1))
 
-        self.W_m = self.beta1 * self.W_m + (1 - self.beta1) * grad_W
-        self.W_v = self.beta2 * self.W_v + (1 - self.beta2) * np.square(grad_W)
+        self.W_m = self.beta1 * self.W_m.T + (1 - self.beta1) * grad_W
+        self.W_v = self.beta2 * self.W_v.T + (1 - self.beta2) * np.square(grad_W)
         self.b_m = self.beta1 * self.b_m + (1 - self.beta1) * grad_b
         self.b_v = self.beta2 * self.b_v + (1 - self.beta2) * np.square(grad_b)
 
@@ -120,5 +121,6 @@ class Layer:
         b_m_hat = self.b_m / (1 - self.beta1_t)
         b_v_hat = self.b_v / (1 - self.beta2_t)
         eps = 1E-6
+        print(W_v_hat, W_m_hat, self.W)
         self.W += -self.lr / (np.sqrt(W_v_hat) + eps) * W_m_hat
         self.b += -self.lr / (np.sqrt(b_v_hat) + eps) * b_m_hat
