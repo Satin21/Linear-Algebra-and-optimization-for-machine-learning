@@ -102,25 +102,25 @@ class Layer:
     # ADAM GD, see e.g. p.105 of the lecture notes
     def compute_grad(self, err_grad):
         a_der = self.activate_der(self.last_in)
-        grad_W = err_grad * a_der.dot(self.last_out.T)
         grad_b = err_grad * a_der
-        new_err_grad = np.sum(err_grad * a_der * self.W, axis=0).reshape((-1, 1))
+        grad_W = grad_b @ self.last_in.T
+        new_err_grad = self.W @ grad_b
 
-        self.W_m = self.beta1 * self.W_m.T + (1 - self.beta1) * grad_W
-        self.W_v = self.beta2 * self.W_v.T + (1 - self.beta2) * np.square(grad_W)
+        self.W_m = self.beta1 * self.W_m + (1 - self.beta1) * grad_W.T
+        self.W_v = self.beta2 * self.W_v + (1 - self.beta2) * np.square(grad_W.T)
         self.b_m = self.beta1 * self.b_m + (1 - self.beta1) * grad_b
         self.b_v = self.beta2 * self.b_v + (1 - self.beta2) * np.square(grad_b)
 
         return new_err_grad
 
     def update_weights(self):
-        self.beta1_t *= self.beta1
-        self.beta1_t *= self.beta2
+        self.beta1_t *= self.beta1  # beta1_t = pow(beta1, t), where t denotes the t-th iteration
+        self.beta2_t *= self.beta2
         W_m_hat = self.W_m / (1 - self.beta1_t)
         W_v_hat = self.W_v / (1 - self.beta2_t)
         b_m_hat = self.b_m / (1 - self.beta1_t)
         b_v_hat = self.b_v / (1 - self.beta2_t)
-        eps = 1E-6
+        eps = 1E-8
         print(W_v_hat, W_m_hat, self.W)
         self.W += -self.lr / (np.sqrt(W_v_hat) + eps) * W_m_hat
         self.b += -self.lr / (np.sqrt(b_v_hat) + eps) * b_m_hat
