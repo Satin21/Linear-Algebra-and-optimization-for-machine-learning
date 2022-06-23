@@ -109,7 +109,7 @@ class Layer:
     def compute_grad(self, err_grad):
         n_samples = self.last_out.shape[1]
 
-        # Compute the gradient w.r.t. b (averaged over all samples)
+        # Compute the gradient w.r.t. b per sample
         grad_b = err_grad * self.activate_der(self.last_z)
 
         # Compute the gradient w.r.t. W (averaged over all samples)
@@ -121,8 +121,10 @@ class Layer:
         # Compute the error gradient to propagate
         new_err_grad = self.W.T @ grad_b
 
-        # Update the Adam parameters
+        # Compute the gradient w.r.t. b (averaged over all samples)
         grad_b = np.mean(grad_b, axis=1).reshape((-1, 1))
+
+        # Update the Adam parameters
         self.W_m = self.beta1 * self.W_m + (1 - self.beta1) * grad_W
         self.W_v = self.beta2 * self.W_v + (1 - self.beta2) * np.square(grad_W)
         self.b_m = self.beta1 * self.b_m + (1 - self.beta1) * grad_b

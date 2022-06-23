@@ -119,12 +119,13 @@ def plot_cdf(X: list):
 
 
 # Plot the transformed data set X, i.e. the principal components
-def plot_x_transformed(pc, Y):
+def plot(pc, Y, title: str):
+    Y = np.array(Y)
     pc1 = pc[Y == 1, :]
-    pc2 = pc[Y == -1, :]
+    pc2 = pc[Y != 1, :]
     plt.plot(pc1[:, 0], pc1[:, 1], '.')
     plt.plot(pc2[:, 0], pc2[:, 1], '.')
-    plt.title('Reduced Feature Space')
+    plt.title(title)
     plt.xlabel('Principal Component 1')
     plt.ylabel('Principal Component 2')
     plt.legend(['Sick', 'Healthy'])
@@ -219,13 +220,16 @@ if __name__ == '__main__':
     print('explained variance ratio:', pca.explained_variance_ratio_, sum(pca.explained_variance_ratio_))
 
     # plot_cdf(X)
-    # plot_x_transformed(pc, Y)
+    plot(pc, Y, 'Reduced Feature Space')
 
     # Apply K-Means to see its performance
     K = 2
-    _, a = kMeans(pc, Y, K)
+    y_pred, a = kMeans(pc, Y, K)
     print('K-Means K={:d} gives an acc. of {:.0f} %'.format(K, a * 100))
-    
+
+    # plot(pc, y, 'K-Means K={:d}'.format(K))  # TODO (Sattish): use this line & plot the labeling areas in the background
+    plot(pc, y_pred, 'K-Means K={:d}'.format(K))
+
     lr_set = [.2, .1, .05]
     lr_set = [.1, .01, .05]
     Ki_set = [2, 5, 10]
