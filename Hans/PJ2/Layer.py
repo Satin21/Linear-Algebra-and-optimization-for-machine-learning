@@ -1,20 +1,24 @@
 import numpy as np
 
 
+# The sigmoid actiovation function
 def _sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
 
-def _sigmoid_der(x):  # Sigmoid derivative
+# The sigmoid derivative
+def _sigmoid_der(x):
     y = _sigmoid(x)
     return y * (1 - y)
 
 
-def _relu(x, leak=0):  # ReLU
+# The ReLU activation function
+def _relu(x, leak=0):
     return np.where(x <= 0, leak * x, x)
 
 
-def _relu_der(x, leak=0):  # ReLU derivative
+# The ReLU derivative
+def _relu_der(x, leak=0):
     return np.where(x <= 0, leak, 1)
 
 
@@ -22,29 +26,24 @@ def _identity(x):
     return x
 
 
-def _mse(y_true, y_pred):  # MSE
+# Compute the MSE
+def _mse(y_true, y_pred):
     return np.mean((y_true - y_pred) ** 2)
 
 
-def _mse_der(y_true, y_pred):  # MSE derivative
+# Compute the MSE derivative
+def _mse_der(y_true, y_pred):
     N = y_true.shape[0]
 
     return 2 * (y_pred - y_true) / N
 
 
+# NICE TODO: use batch normalization per layer
 def _normalize(x):  # Layer Normalization
     mean = x.mean()
     std = x.std()
 
     return (x - mean) / (std + 10 ** -100)
-
-
-# def cross_E(y_true, y_pred):  # CE
-#     return -np.sum(y_true * np.log(y_pred + 10 ** -100))
-#
-#
-# def cross_E_grad(y_true, y_pred):  # CE derivative
-#     return -y_true / (y_pred + 10 ** -100)
 
 
 # From https://medium.com/@neuralthreads/layer-normalization-applied-on-a-neural-network-f6ad51341726
@@ -119,7 +118,9 @@ class Layer:
 
         return new_err_grad
 
+    # Update the weights W and b using Adam
     def update_weights(self):
+        # Compute the relevant Adam parameters
         self.beta1_t *= self.beta1  # beta1_t = pow(beta1, t), where t denotes the t-th iteration
         self.beta2_t *= self.beta2
         W_m_hat = self.W_m / (1 - self.beta1_t)
@@ -127,5 +128,7 @@ class Layer:
         b_m_hat = self.b_m / (1 - self.beta1_t)
         b_v_hat = self.b_v / (1 - self.beta2_t)
         eps = 1E-8
+
+        # Update the weights W and b
         self.W += -self.lr / (np.sqrt(W_v_hat) + eps) * W_m_hat
         self.b += -self.lr / (np.sqrt(b_v_hat) + eps) * b_m_hat

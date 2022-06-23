@@ -3,7 +3,7 @@ import numpy as np
 from Layer import Layer
 
 
-def mse_grad(y_true, y_pred):  # MSE derivative
+def mse_der(y_true, y_pred):  # MSE derivative
     if isinstance(y_true, float):
         n = 1
     else:
@@ -13,9 +13,18 @@ def mse_grad(y_true, y_pred):  # MSE derivative
 
 
 # Compute the gradient/derivative of the binary regression loss function
-# loss = sum [ y_true * log(y_pred) + (1 - y_true) * log(1 - y_pred) ]
 def loss_der(y_true, y_pred):
-    return -sum(y_true // y_pred - (1 - y_true) // (1 - y_pred))
+    return -sum(y_true // y_pred - [1 - y for y in y_true] // (1 - y_pred))
+
+
+# Define the binary cross-entropy (CE) function
+def cross_e(y_true, y_pred):
+    return -np.sum(y_true * np.log(y_pred + 10 ** -100))
+
+
+# The CE derivative
+def cross_e_der(y_true, y_pred):
+    return -y_true / (y_pred + 10 ** -100)
 
 
 class NN:
@@ -31,9 +40,9 @@ class NN:
             self.layers.append(
                 Layer(n_per_layer[i], n_per_layer[i - 1], hidden_activation, lr=lr))  # Define the other hidden layers
         self.layers.append(
-            Layer(n_out, n_per_layer[n_layers - 1], out_activation, lr=lr))
+            Layer(n_out, n_per_layer[n_layers - 1], out_activation, lr=lr))  # Define the output layer
 
-    # Propagate the input x through the network
+    # Forward-Propagation: Propagate the input x through the network and return the output
     def __call__(self, x: np.ndarray):
 
         # Ensure that x is a vector to process it in the layers
@@ -49,8 +58,8 @@ class NN:
 
         return x
 
-    # Learn by doing back-propagation
-    def learn(self, y_true):
+    # Do the backward-propagation
+    def learn(self, y_true: list):
 
         # Compute the gradients
         err_grad = loss_der(y_true, self.y_pred)
@@ -60,3 +69,10 @@ class NN:
         # Update all weights
         for layer in self.layers:
             layer.update_weights()
+
+    # Compute the loss function: binary cross-entropy function
+    # loss = sum [ y_true * log(y_pred) + (1 - y_true) * log(1 - y_pred) ]
+    def loss(self, y_true: list, y_pred: list):
+        y_true = np.array(y_true)
+        y_pred = np.array(y_pred)
+        return cross_e(y_true, y_pred) + cross_e(1 - y_true, 1 - np.array(y_pred))
