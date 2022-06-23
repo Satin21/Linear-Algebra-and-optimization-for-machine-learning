@@ -34,7 +34,9 @@ def plot_result(losses: list, accuracy: list, cur_it: int, n_iter: int, fname: s
 
     # x ticks
     step = round(n_iter / 100) * 10
-    if cur_it > n_iter:
+    if n_iter <= 100:
+        step = 10
+    elif cur_it > n_iter:
         step = n_iter
     plt.xticks(np.arange(0, n_iter + 1, step))
 

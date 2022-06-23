@@ -86,7 +86,8 @@ def validate(nn: NN, x_train: list, batch_size: int):
 
 # TODO: Test (using the test set)
 def test(nn: NN, X: list, y_true: list):
-    y_pred = nn(X)
+    print(X.shape)
+    y_pred = nn(X.T)
     a = get_accuracy(y_true, y_pred)
     print("Test accuracy {:.2f}".format(a))
 
@@ -191,7 +192,7 @@ def kMeans(X: np.ndarray, y_true, K: int):
 
 
 if __name__ == '__main__':
-    N_ITER = 500
+    N_ITER = 50
 
     # Read the data
     X = read_csv(fname)
@@ -231,28 +232,22 @@ if __name__ == '__main__':
     plot(pc, y_pred, 'K-Means K={:d}'.format(K))
 
     lr_set = [.2, .1, .05]
-    lr_set = [.1, .01, .05]
     Ki_set = [2, 5, 10]
-    Ki_set = [5, 2, 10]
     N_set = [2, 5, 10]
-    N_set = [5, 2, 10]
 
     for lr in lr_set:
         for Ki in Ki_set:  # #neurons per layer
             for N in N_set:  # #leyare
+                print('Start training using {:d} layers, each containing {:d} neurons, with lr = {:.3f}'.format(N, Ki, lr))
 
                 # Create a NN
                 n_per_layer = [Ki for i in range(N)]
                 nn = NN(2, 1, N, n_per_layer, lr=lr)
 
-                x_train, y_train, x_test, y_test = split_data(X, Y, 0.25)  # Take 25% of the data set as test data
+                X_train, X_test, y_train, y_test = split_data(pc, Y, 0.25)  # Take 25% of the data set as test data
 
-                train(nn, pc, Y)
+                train(nn, X_train, y_train)
                 # validate(nn, x_val, y_val)
-                test(nn, x_test, y_test)
-                break
-            break
+                test(nn, X_test, y_test)
 
         # TODO: per (Ki, N), create a plot of the 9 results for the given learning rate lr
-
-        break
