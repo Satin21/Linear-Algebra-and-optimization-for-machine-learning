@@ -12,6 +12,12 @@ def mse_der(y_true, y_pred):  # MSE derivative
     return 2 * (y_pred - y_true) / n
 
 
+# Compute the loss function: binary cross-entropy function
+# loss = sum ( y_true * log(y_pred) + (1 - y_true) * log(1 - y_pred) )
+def loss(y_true: list, y_pred: list):
+    return cross_e(y_true, y_pred) + cross_e(1 - y_true, 1 - y_pred)
+
+
 # Compute the gradient/derivative of the binary regression loss function
 def loss_der(y_true, y_pred):
     return -sum(y_true // y_pred - [1 - y for y in y_true] // (1 - y_pred))
@@ -39,8 +45,7 @@ class NN:
         for i in range(1, n_layers):
             self.layers.append(
                 Layer(n_per_layer[i], n_per_layer[i - 1], hidden_activation, lr=lr))  # Define the other hidden layers
-        self.layers.append(
-            Layer(n_out, n_per_layer[n_layers - 1], out_activation, lr=lr))  # Define the output layer
+        self.layers.append(Layer(n_out, n_per_layer[n_layers - 1], out_activation, lr=lr))  # Define the output layer
 
     # Forward-Propagation: Propagate the input x through the network and return the output
     def __call__(self, x: np.ndarray):
@@ -64,15 +69,8 @@ class NN:
         # Compute the gradients
         err_grad = loss_der(y_true, self.y_pred)
         for layer in reversed(self.layers):
-            err_grad = layer.compute_grad(err_grad)  # TODO: use err_grad correctly for back-propagation through the layers
+            err_grad = layer.compute_grad(err_grad)
 
         # Update all weights
         for layer in self.layers:
             layer.update_weights()
-
-    # Compute the loss function: binary cross-entropy function
-    # loss = sum [ y_true * log(y_pred) + (1 - y_true) * log(1 - y_pred) ]
-    def loss(self, y_true: list, y_pred: list):
-        y_true = np.array(y_true)
-        y_pred = np.array(y_pred)
-        return cross_e(y_true, y_pred) + cross_e(1 - y_true, 1 - np.array(y_pred))

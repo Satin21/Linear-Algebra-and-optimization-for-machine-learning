@@ -4,11 +4,11 @@ import time
 
 import matplotlib.pyplot as plt
 import numpy as np
-from nn import NN
+from nn import NN, loss
 from progressPlotter import plot_result
 from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
 fname = '../heart.csv'
 
@@ -39,7 +39,7 @@ def mse(y: list, y_true: list):
 
 
 # Train the NN
-def train(nn: NN, pc: list, y: list):
+def train(nn: NN, pc: list, y_true: list):
     # Record the starting time to determine the runtime
     t0 = time.time()
 
@@ -48,32 +48,24 @@ def train(nn: NN, pc: list, y: list):
     accuracy = []
     min_loss = float('inf')
     n = len(pc)
-    for ep in range(N_ITER):
+    for it in range(N_ITER):
+        y_pred = nn(pc.T)  # Feed-forward all samples
 
-        # Select the i-th sample
-        i = np.random.randint(n)
-        x = pc[i]
-        y_true = [y[i]]
-
-        # TODO: Use the whole data set
-        y_pred = nn(x.T)  # Feed-forward
-        # y_pred = nn(pc.T)  # Feed-forward all samples
-        print(y_true, y_pred)
         # Loasses
-        l = nn.loss(y_pred, y_true)
+        l = loss(y_pred, y_true)
         losses.append(l)
         if l < min_loss:
             min_loss = l
-        
+
         # Accuracy
         acc = get_accuracy(y_true, y_pred)
         accuracy.append(acc)
 
-        print('Ep. {:d} | loss: {:.2f} Min. loss: {:.2f}'.format(ep, l, min_loss))
+        print('Ep. {:d} | Acc: {:.0f} %, Loss: {:.1f}, Min. loss: {:.1f}'.format(it + 1, acc * 100, l, min_loss))
         nn.learn(y_true)
 
         # Show the progress/learning
-        plot_result(losses, accuracy, cur_it=ep + 1, n_iter=N_ITER)
+        plot_result(losses, accuracy, cur_it=it + 1, n_iter=N_ITER)
         if float('nan') in y_pred:
             print('WARNING: NaN detected in y_pred.')
             break
@@ -100,7 +92,6 @@ def test(nn: NN, X: list, y_true: list):
 
 # Split the data into training and validation data
 def split_data(X: list, Y: list, test_size: float):
-
     # Apply stratified sampling
     return train_test_split(X, Y, stratify=Y, test_size=test_size)
 
@@ -144,11 +135,12 @@ def get_accuracy(y_true, y_pred):
     return sum(y_true == (y_pred >= 0)) / len(y_true)
 
 
-def sample_as_mini_batches(x_train: np.ndarray, batch_size:int):
+def sample_as_mini_batches(x_train: np.ndarray, batch_size: int):
     random_samples = np.array(random.sample(set(range(len(x_train))), len(x_train)))
     random_samples = np.array_split(random_samples, batch_size)
 
-    assert sum([len(batch) for batch in random_samples]) ==  len(x_train), "some samples in the training set are not added"
+    assert sum([len(batch) for batch in random_samples]) == len(
+        x_train), "some samples in the training set are not added"
     return [x_train[arr] for arr in random_samples]
 
 
@@ -163,6 +155,9 @@ if __name__ == '__main__':
     Y = X[:, 13]  # Labels
     X = X[:, :13]
     print('X.shape:', X.shape)
+
+    # Make the labels binary, i.e. (+1, -1) -> (1, 0)
+    Y = (np.array(Y) + 1) / 2
 
     X = mean_centered(X)
     # Cxx = cov_mat(X)
@@ -181,7 +176,7 @@ if __name__ == '__main__':
     # plot_cdf(X)
     # plot_x_transformed(pc, Y)
 
-    lr_set = [.2, .1, .05]
+    lr_set = [.1, .07, .05]
     Ki_set = [2, 5, 10]
     N_set = [2, 5, 10]
 

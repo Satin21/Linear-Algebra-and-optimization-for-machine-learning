@@ -93,7 +93,7 @@ class Layer:
         self.b_v = np.zeros((n, 1))
 
     # Propagate the input data through this layer & return the result
-    # TODO: propagate a list of samples
+    # Propagation of a list of samples is possible, where each sample is a column
     def __call__(self, x):
         # x = normalize(x)  # TODO: Normalization would be nice
         self.last_z = self.W @ x + self.b
@@ -107,10 +107,22 @@ class Layer:
     # Inspired by https://medium.com/@neuralthreads/backpropagation-made-super-easy-for-you-part-1-6fb4aa5a0aaf
     # ADAM GD, see e.g. p.105 of the lecture notes
     def compute_grad(self, err_grad):
+        n_samples = self.last_out.shape[1]
+
+        # Compute the gradient w.r.t. b (averaged over all samples)
         grad_b = err_grad * self.activate_der(self.last_z)
-        grad_W = grad_b @ self.last_out.T
+
+        # Compute the gradient w.r.t. W (averaged over all samples)
+        grad_W = np.zeros(self.W.shape)
+        for i in range(n_samples):
+            grad_W += grad_b[:, i] @ self.last_out[:, i].T
+        grad_W /= n_samples
+
+        # Compute the error gradient to propagate
         new_err_grad = self.W.T @ grad_b
 
+        # Update the Adam parameters
+        grad_b = np.mean(grad_b, axis=1).reshape((-1, 1))
         self.W_m = self.beta1 * self.W_m + (1 - self.beta1) * grad_W
         self.W_v = self.beta2 * self.W_v + (1 - self.beta2) * np.square(grad_W)
         self.b_m = self.beta1 * self.b_m + (1 - self.beta1) * grad_b
