@@ -9,14 +9,15 @@ from progressPlotter import plot_result
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
+import random
 
-fname = '../heart.csv'
+fname = "../heart.csv"
 
 
 def read_csv(fname):
     X = []
-    with open(fname, newline='') as csvfile:
-        reader = csv.reader(csvfile, delimiter=',', quotechar='|')
+    with open(fname, newline="") as csvfile:
+        reader = csv.reader(csvfile, delimiter=",", quotechar="|")
         for row in reader:
             # print(', '.join(row))
             X.append(np.asarray(row, dtype=float))
@@ -41,6 +42,16 @@ def loss(y, y_true):
     return mse(y, y_true)
 
 
+def sample_as_mini_batches(x: np.ndarray, batch_size: int):
+    random_samples = np.array(random.sample(set(range(len(x))), len(x)))
+    random_samples = np.array_split(random_samples, batch_size)
+
+    assert sum([len(batch) for batch in random_samples]) == len(
+        x
+    ), "some samples in the input data are not considered in any batches"
+    return [x[arr] for arr in random_samples]
+
+
 # Train the NN
 def train(nn: NN, pc: list, y: list):
     # Record the starting time to determine the runtime
@@ -48,7 +59,7 @@ def train(nn: NN, pc: list, y: list):
 
     # Init variables
     losses = []
-    min_loss = float('inf')
+    min_loss = float("inf")
     n = len(pc)
     for ep in range(N_EPOCHS):
 
@@ -66,7 +77,7 @@ def train(nn: NN, pc: list, y: list):
         if l < min_loss:
             min_loss = l
 
-        print(f'Ep. {ep} | loss:', l)
+        print(f"Ep. {ep} | loss:", l)
         nn.learn(y_true)
 
         # Show the progress/learning
@@ -95,7 +106,7 @@ def split_data(X: list, Y: list, test_size: float):
 
 
 def pdf2cdf(x: list):
-    return np.pad(np.cumsum(x), (1, 0), mode='constant')
+    return np.pad(np.cumsum(x), (1, 0), mode="constant")
 
 
 # Plot the CDF
@@ -106,10 +117,10 @@ def plot_cdf(X: list):
     pca.fit_transform(X)  # Compute the principal components & transform the data
     cdf = pdf2cdf(pca.explained_variance_ratio_)
 
-    plt.plot(cdf, '.-')
-    plt.title('Explained Variance CDF')
-    plt.xlabel('#Principal Components')
-    plt.ylabel('CDF')
+    plt.plot(cdf, ".-")
+    plt.title("Explained Variance CDF")
+    plt.xlabel("#Principal Components")
+    plt.ylabel("CDF")
     plt.grid()
     plt.show()
 
@@ -118,12 +129,12 @@ def plot_cdf(X: list):
 def plot_x_transformed(pc, Y):
     pc1 = pc[Y == 1, :]
     pc2 = pc[Y == -1, :]
-    plt.plot(pc1[:, 0], pc1[:, 1], '.')
-    plt.plot(pc2[:, 0], pc2[:, 1], '.')
-    plt.title('Reduced Feature Space')
-    plt.xlabel('Principal Component 1')
-    plt.ylabel('Principal Component 2')
-    plt.legend(['Sick', 'Healthy'])
+    plt.plot(pc1[:, 0], pc1[:, 1], ".")
+    plt.plot(pc2[:, 0], pc2[:, 1], ".")
+    plt.title("Reduced Feature Space")
+    plt.xlabel("Principal Component 1")
+    plt.ylabel("Principal Component 2")
+    plt.legend(["Sick", "Healthy"])
     plt.show()
 
 
@@ -131,7 +142,9 @@ def plot_x_transformed(pc, Y):
 def get_accuracy(y_true, y_pred):
     a = 0
     for k in range(K):
-        Lk = y_true[[i for i, yi in enumerate(y_pred) if yi == k]]  # Lk = {y_true_i : y_i = k}
+        Lk = y_true[
+            [i for i, yi in enumerate(y_pred) if yi == k]
+        ]  # Lk = {y_true_i : y_i = k}
         Lk = DataFrame(data=Lk)
         cnt = Lk.value_counts()
         cnt = cnt.values
@@ -140,7 +153,7 @@ def get_accuracy(y_true, y_pred):
     return a / N
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     N_EPOCHS = 500
 
     # Read the data
@@ -150,7 +163,7 @@ if __name__ == '__main__':
     X = np.array(X)
     Y = X[:, 13]  # Labels
     X = X[:, :13]
-    print('X.shape:', X.shape)
+    print("X.shape:", X.shape)
 
     X = mean_centered(X)
     # Cxx = cov_mat(X)
@@ -163,13 +176,17 @@ if __name__ == '__main__':
     # Do the PCA
     pca = PCA(n_components=2)
     pc = pca.fit_transform(X)  # Compute the principal components & transform the data
-    print('explained variance:', pca.explained_variance_)
-    print('explained variance ratio:', pca.explained_variance_ratio_, sum(pca.explained_variance_ratio_))
+    print("explained variance:", pca.explained_variance_)
+    print(
+        "explained variance ratio:",
+        pca.explained_variance_ratio_,
+        sum(pca.explained_variance_ratio_),
+    )
 
     # plot_cdf(X)
     # plot_x_transformed(pc, Y)
 
-    lr_set = [.11, .05, .01]
+    lr_set = [0.11, 0.05, 0.01]
     Ki_set = [2, 5, 10]
     N_set = [2, 5, 10]
 
