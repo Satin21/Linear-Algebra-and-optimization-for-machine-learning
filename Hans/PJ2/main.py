@@ -86,10 +86,11 @@ def validate(nn: NN, x_train: list, batch_size: int):
 
 # TODO: Test (using the test set)
 def test(nn: NN, X: list, y_true: list):
-    print(X.shape)
     y_pred = nn(X.T)
     a = get_accuracy(y_true, y_pred)
     print("Test accuracy {:.2f}".format(a))
+
+    return y_pred, a
 
 
 # Split the data into training and validation data
@@ -191,6 +192,11 @@ def kMeans(X: np.ndarray, y_true, K: int):
     return y, a  # Return the labels & accuracy
 
 
+# TODO: Craete a plot showing the scattered data & labeling areas
+def create_plot_data(nn: NN, y_pred: list):
+    pass
+
+
 if __name__ == '__main__':
     N_ITER = 50
 
@@ -248,6 +254,8 @@ if __name__ == '__main__':
 
                 train(nn, X_train, y_train)
                 # validate(nn, x_val, y_val)
-                test(nn, X_test, y_test)
+                y_pred, a = test(nn, X_test, y_test)
+                # plots.append(create_plot_data(nn, y_pred))  # TODO: this is just an idea for the 3x3 plot
 
-        # TODO: per (Ki, N), create a plot of the 9 results for the given learning rate lr
+        # TODO: For each learning rate lr, create a plot of the 9 results (1 for each (Ki, N) combi)
+        # plot_all(plots)  # TODO: this is just an idea for the 3x3 plot
