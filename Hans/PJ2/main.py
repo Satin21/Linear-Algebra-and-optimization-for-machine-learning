@@ -5,7 +5,9 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 from nn import NN, loss
+from pandas import DataFrame
 from progressPlotter import plot_result
+from scipy.spatial.distance import cdist
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -47,7 +49,6 @@ def train(nn: NN, pc: list, y_true: list):
     losses = []
     accuracy = []
     min_loss = float('inf')
-    n = len(pc)
     for it in range(N_ITER):
         y_pred = nn(pc.T)  # Feed-forward all samples
 
@@ -132,7 +133,7 @@ def plot_x_transformed(pc, Y):
 
 # Determine the accuracy, i.e. the percentage of labels predicted correctly
 def get_accuracy(y_true, y_pred):
-    return sum(y_true == (y_pred >= 0)) / len(y_true)
+    return sum(y_true == (y_pred > .5)) / len(y_true)
 
 
 def sample_as_mini_batches(x_train: np.ndarray, batch_size: int):
@@ -142,6 +143,50 @@ def sample_as_mini_batches(x_train: np.ndarray, batch_size: int):
     assert sum([len(batch) for batch in random_samples]) == len(
         x_train), "some samples in the training set are not added"
     return [x_train[arr] for arr in random_samples]
+
+
+# @jit(nopython=True, parallel=True)
+def kMeans(X: np.ndarray, y_true, K: int):
+    # log('Starting K-means clustering using the metric \'%s\'' % metric)
+
+    # Randomly initialize the centroids c
+    N, M = X.shape
+    c = X[np.random.randint(N, size=K)]
+    y = [-1] * N  # Labels
+
+    ePrev = M * N + 1
+    eNew = ePrev - 1
+    while ePrev - eNew > 0:
+        ePrev = eNew
+        eNew = 0
+
+        # Assign x_i to cluster k = argmin_j || x_i - c_j ||
+        for i, x in enumerate(X):
+            dists = cdist([x], c, 'sqeuclidean')
+            y[i] = np.argmin(dists)
+
+        # Update the centroid positions
+        for k in range(K):
+            Ck = X[[i for i, yi in enumerate(y) if yi == k]]  # Compute Ck = {x_i where the label y_i = k}
+            if len(Ck) > 0:
+                c[k] = Ck.mean(axis=0)  # Centroid = the mean of the elements/columns in Ck
+                eNew += cdist([c[k]], Ck).sum()  # Compute the error
+            else:
+                # Try to find a good position for this centroid
+                c[k] = c.mean()
+
+    # Determine the accuracy
+    a = 0
+    for k in range(K):
+        Lk = y_true[[i for i, yi in enumerate(y) if yi == k]]  # Lk = {y_true_i : y_i = k}
+        Lk = DataFrame(data=Lk)
+        cnt = Lk.value_counts()
+        cnt = cnt.values
+        if len(cnt) > 0:
+            a += cnt[0]
+    a /= N
+
+    return y, a  # Return the labels & accuracy
 
 
 if __name__ == '__main__':
@@ -176,9 +221,17 @@ if __name__ == '__main__':
     # plot_cdf(X)
     # plot_x_transformed(pc, Y)
 
-    lr_set = [.1, .07, .05]
+    # Apply K-Means to see its performance
+    K = 2
+    _, a = kMeans(pc, Y, K)
+    print('K-Means K={:d} gives an acc. of {:.0f} %'.format(K, a * 100))
+    
+    lr_set = [.2, .1, .05]
+    lr_set = [.1, .01, .05]
     Ki_set = [2, 5, 10]
+    Ki_set = [5, 2, 10]
     N_set = [2, 5, 10]
+    N_set = [5, 2, 10]
 
     for lr in lr_set:
         for Ki in Ki_set:  # #neurons per layer
