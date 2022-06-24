@@ -1,10 +1,10 @@
 import argparse
 import csv
 import time
-from KMeans import KMeans
 
 import matplotlib.pyplot as plt
 import numpy as np
+from KMeans import KMeans
 from matplotlib.colors import ListedColormap
 from nn import NN, loss
 from progressPlotter import plot_result
@@ -40,6 +40,12 @@ def mse(y: list, y_true: list):
     return np.mean((y_true - y) ** 2)
 
 
+# Get a batch of size batch_size of the given data samples in X
+def get_batch(X: list, y_true: list, batch_size=16):
+    batch = np.random.choice(len(X), batch_size, replace=False)
+    return X[batch], y_true[batch]
+
+
 # Train the NN
 def train(nn: NN, pc: list, y_true: list):
     # Record the starting time to determine the runtime
@@ -50,20 +56,28 @@ def train(nn: NN, pc: list, y_true: list):
     accuracy = []
     min_loss = float('inf')
     for it in range(N_ITER):
-        y_pred = nn(pc.T)  # Feed-forward all samples
 
-        # Loasses
-        l = loss(y_pred, y_true)
+        # Select a batch to do the NN optimization with
+        batch_size = len(pc)
+        X_batch, y_batch = get_batch(pc, y_true, batch_size)
+
+        # Do the forward propagation using the batch
+        y_pred = nn(X_batch.T)
+
+        # Compute the loss
+        l = loss(y_pred, y_batch)
         losses.append(l)
         if l < min_loss:
             min_loss = l
 
         # Accuracy
-        acc = get_accuracy(y_true, y_pred)
+        acc = get_accuracy(y_batch, y_pred)
         accuracy.append(acc)
 
         print('Ep. {:d} | Acc: {:.0f} %, Loss: {:.1f}, Min. loss: {:.1f}'.format(it + 1, acc * 100, l, min_loss))
-        nn.learn(y_true)
+
+        # Do the backward propagation
+        nn.learn(y_batch)
 
         # Show the progress/learning
         plot_result(losses, accuracy, cur_it=it + 1, n_iter=N_ITER)
@@ -203,7 +217,7 @@ def plot_boundaries_and_scatter(X: list, y_true: np.ndarray, nn: NN = None):
 
 
 if __name__ == '__main__':
-    N_ITER = 50
+    N_ITER = 500
 
     # Read the data
     X = read_csv(fname)
@@ -232,19 +246,27 @@ if __name__ == '__main__':
     print('explained variance ratio:', pca.explained_variance_ratio_, sum(pca.explained_variance_ratio_))
 
     # plot_cdf(X)
-    # plot(pc, Y, 'Reduced Feature Space')
+    plot(pc, Y, 'Reduced Feature Space')
 
     # Apply K-Means to see its performance
     K = 2
+    n_runs = 10
     kMeans = KMeans()
-    y_pred, a = kMeans(pc, Y, K)
+    a_avg = 0
+    for i in range(n_runs):
+        y_pred, a = kMeans(pc, Y, K)
+        a_avg += a
+    a_avg /= n_runs
     print('K-Means cluster centers:', kMeans.cluster_centers)
-    print('K-Means K={:d} gives an acc. of {:.0f} %'.format(K, a * 100))
+    print('K-Means K={:d} gives an avg. acc. of {:.1f} % over {:d} runs'.format(K, a_avg * 100, n_runs))
     plot_boundaries_and_scatter(pc, Y)
 
     lr_set = [.2, .1, .05]
+    lr_set = [.01, .1, .05]
     Ki_set = [2, 5, 10]
+    Ki_set = [5, 2, 10]
     N_set = [2, 5, 10]
+    N_set = [10, 5, 10]
 
     for lr in lr_set:
         for Ki in Ki_set:  # #neurons per layer
@@ -254,7 +276,7 @@ if __name__ == '__main__':
 
                 # Create a NN
                 n_per_layer = [Ki for i in range(N)]
-                nn = NN(2, 1, N, n_per_layer, lr=lr)
+                nn = NN(2, 1, N, n_per_layer, lr=lr, optimizer='gd')
 
                 X_train, X_test, y_train, y_test = split_data(pc, Y, 0.25)  # Take 25% of the data set as test data
 

@@ -39,13 +39,15 @@ class NN:
     # hidden_activation = the activation function for all hidden layers, out_activation = the same for the output layer,
     # lr = the learning rate for the gradient updates.
     def __init__(self, n_in: int, n_out: int, n_layers: int, n_per_layer: list, hidden_activation='relu',
-                 out_activation='sigmoid', lr=.01):
+                 out_activation='sigmoid', lr=.01, optimizer='adam'):
         self.layers = []
-        self.layers.append(Layer(n_per_layer[0], n_in, hidden_activation, lr=lr))  # Define the first hidden layer
+        self.layers.append(
+            Layer(n_per_layer[0], n_in, hidden_activation, lr=lr, optimizer=optimizer))  # Define the first hidden layer
         for i in range(1, n_layers):
-            self.layers.append(
-                Layer(n_per_layer[i], n_per_layer[i - 1], hidden_activation, lr=lr))  # Define the other hidden layers
-        self.layers.append(Layer(n_out, n_per_layer[n_layers - 1], out_activation, lr=lr))  # Define the output layer
+            self.layers.append(Layer(n_per_layer[i], n_per_layer[i - 1], hidden_activation, lr=lr,
+                                     optimizer=optimizer))  # Define the other hidden layers
+        self.layers.append(Layer(n_out, n_per_layer[n_layers - 1], out_activation, lr=lr,
+                                 optimizer=optimizer))  # Define the output layer
 
     # Forward-Propagation: Propagate the input x through the network and return the output
     def __call__(self, x: np.ndarray):

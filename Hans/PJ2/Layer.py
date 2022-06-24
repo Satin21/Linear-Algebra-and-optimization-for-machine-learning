@@ -67,12 +67,15 @@ class Layer:
         self.W = np.random.uniform(-u, u, (n, n_prev))
         self.b = np.zeros((n, 1))
 
-    def __init__(self, n, n_prev, activation='relu', lr=.01, beta1=.9, beta2=.999):
+    # Define a layer comprising n neurons, n_prev = #neurons in the previous layer, learning rate lr,
+    # optimizer 'adam' (Adam gradient) or 'gd' (standard GD), beta1 and beta2 are Adam parameters
+    def __init__(self, n, n_prev, activation='relu', lr=.01, optimizer='adam', beta1=.9, beta2=.999):
         self.lr = lr  # Set the learning rate
         self.beta1 = beta1
         self.beta2 = beta2
         self.beta1_t = 1.  # = pow(beta1, t) in the t-th iteration/call of compute_grad()
         self.beta2_t = 1.
+        self.optimizer = optimizer
 
         # Set the activation function
         act_map = {'relu': _relu, 'sigmoid': _sigmoid, None: _identity}
@@ -87,6 +90,8 @@ class Layer:
         self.__init_weights(n, n_prev, activation)
         self.grad_W = None
         self.grad_b = None
+
+        # Init the Adam GD parameters
         self.W_m = np.zeros((n, n_prev))
         self.W_v = np.zeros((n, n_prev))
         self.b_m = np.zeros((n, 1))
@@ -134,15 +139,20 @@ class Layer:
 
     # Update the weights W and b using Adam
     def update_weights(self):
-        # Compute the relevant Adam parameters
-        self.beta1_t *= self.beta1  # beta1_t = pow(beta1, t), where t denotes the t-th iteration
-        self.beta2_t *= self.beta2
-        W_m_hat = self.W_m / (1 - self.beta1_t)
-        W_v_hat = self.W_v / (1 - self.beta2_t)
-        b_m_hat = self.b_m / (1 - self.beta1_t)
-        b_v_hat = self.b_v / (1 - self.beta2_t)
-        eps = 1E-8
+        if self.optimizer == 'adam':
+            # Compute the relevant Adam parameters
+            self.beta1_t *= self.beta1  # beta1_t = pow(beta1, t), where t denotes the t-th iteration
+            self.beta2_t *= self.beta2
+            W_m_hat = self.W_m / (1 - self.beta1_t)
+            W_v_hat = self.W_v / (1 - self.beta2_t)
+            b_m_hat = self.b_m / (1 - self.beta1_t)
+            b_v_hat = self.b_v / (1 - self.beta2_t)
+            eps = 1E-15
 
-        # Update the weights W and b
-        self.W += -self.lr / (np.sqrt(W_v_hat) + eps) * W_m_hat
-        self.b += -self.lr / (np.sqrt(b_v_hat) + eps) * b_m_hat
+            # Update the weights W and b
+            self.W -= self.lr / (np.sqrt(W_v_hat) + eps) * W_m_hat
+            self.b -= self.lr / (np.sqrt(b_v_hat) + eps) * b_m_hat
+        else:
+            # Update the weights W and b
+            self.W -= self.lr * self.W_m
+            self.b -= self.lr * self.b_m
