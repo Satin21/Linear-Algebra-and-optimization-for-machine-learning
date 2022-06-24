@@ -92,6 +92,28 @@ def test(nn: NN, X: list, y_true: list):
 
     return y_pred, a
 
+def predict(nn: NN, X: list):
+    return nn(X)
+
+def make_uniform_grid(X):
+    min1, max1 = X[:, 0].min()-1, X[:, 0].max()+1
+    min2, max2 = X[:, 1].min()-1, X[:, 1].max()+1
+
+    # define the x and y scale
+    x1grid = np.arange(min1, max1, 0.1)
+    x2grid = np.arange(min2, max2, 0.1)
+
+    xx, yy = np.meshgrid(x1grid, x2grid)
+
+    # flatten each grid to a vector
+    r1, r2 = xx.flatten(), yy.flatten()
+    r1, r2 = r1.reshape((len(r1), 1)), r2.reshape((len(r2), 1))
+
+    # horizontal stack vectors to create x1,x2 input for the model
+    grid = np.hstack((r1,r2))
+
+    return xx, yy, grid
+
 
 # Split the data into training and validation data
 def split_data(X: list, Y: list, test_size: float):
@@ -253,6 +275,14 @@ if __name__ == '__main__':
                 X_train, X_test, y_train, y_test = split_data(pc, Y, 0.25)  # Take 25% of the data set as test data
 
                 train(nn, X_train, y_train)
+
+                ### contour plot to distinguish the two classes in 2D feature space
+                xx, yy, uniformPC = make_uniform_grid(pc)
+                y_pred = predict(nn, uniformPC.T)
+                zz = y_pred.reshape(xx.shape)
+                plt.contourf(xx, yy, zz, cmap = 'Paired');
+                plt.show()
+                
                 # validate(nn, x_val, y_val)
                 y_pred, a = test(nn, X_test, y_test)
                 # plots.append(create_plot_data(nn, y_pred))  # TODO: this is just an idea for the 3x3 plot
