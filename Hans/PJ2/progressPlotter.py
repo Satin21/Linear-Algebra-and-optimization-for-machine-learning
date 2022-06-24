@@ -43,6 +43,8 @@ def plot_result(losses: list, accuracy: list, cur_it: int, n_iter: int, fname: s
     if cur_it < n_iter:
         plt.pause(1e-9)
     else:
+        fig = plt.gcf()
         plt.show()
         if fname is not None:
-            fig.savefig(fname, format='png', dpi=100, bbox_inches='tight')
+            plt.draw()
+            fig.savefig(fname, dpi=100, bbox_inches='tight')
