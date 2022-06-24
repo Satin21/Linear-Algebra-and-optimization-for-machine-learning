@@ -50,11 +50,13 @@ def get_batch(X: list, y_true: list, batch_size=16):
 def train(nn: NN, pc: list, y_true: list):
     # Record the starting time to determine the runtime
     t0 = time.time()
+    t = 0
 
     # Init variables
     losses = []
     accuracy = []
     min_loss = float('inf')
+    best_acc = 0
     for it in range(N_ITER):
 
         # Select a batch to do the NN optimization with
@@ -73,20 +75,29 @@ def train(nn: NN, pc: list, y_true: list):
         # Accuracy
         acc = get_accuracy(y_batch, y_pred)
         accuracy.append(acc)
+        if acc > best_acc:
+            best_acc = acc
 
-        print('Ep. {:d} | Acc: {:.0f} %, Loss: {:.1f}, Min. loss: {:.1f}'.format(it + 1, acc * 100, l, min_loss))
+        print('Ep. {:d} | Acc: {:.1f} %, Best acc.: {:.1f} %. Loss: {:.1f}, Min. loss: {:.1f}'.format(it + 1, acc * 100,
+                                                                                                      best_acc * 100, l,
+                                                                                                      min_loss))
 
         # Do the backward propagation
         nn.learn(y_batch)
 
+        if it == N_ITER - 1:
+            # Record & return the elapsed time
+            t = time.time() - t0
+
         # Show the progress/learning
-        plot_result(losses, accuracy, cur_it=it + 1, n_iter=N_ITER)
+        plot_result(losses, accuracy, cur_it=it + 1, n_iter=N_ITER, fname='loss_acc.png')
         if float('nan') in y_pred:
             print('WARNING: NaN detected in y_pred.')
             break
 
-    # Record & return the elapsed time
-    t = time.time() - t0
+    if t == 0:
+        # Record & return the elapsed time
+        t = time.time() - t0
     print('Training costed {:.2f} s'.format(t))
 
     return t
@@ -102,7 +113,7 @@ def validate(nn: NN, x_train: list, batch_size: int):
 def test(nn: NN, X: list, y_true: list):
     y_pred = nn(X.T)
     a = get_accuracy(y_true, y_pred)
-    print("Test accuracy {:.2f}".format(a))
+    print("Test accuracy: {:.2f}".format(a))
 
     return y_pred, a
 
@@ -112,8 +123,8 @@ def predict(nn: NN, X: list):
 
 
 def make_uniform_grid(X):
-    min1, max1 = X[:, 0].min() - 1, X[:, 0].max() + 1
-    min2, max2 = X[:, 1].min() - 1, X[:, 1].max() + 1
+    min1, max1 = X[:, 0].min() - .5, X[:, 0].max() + .5
+    min2, max2 = X[:, 1].min() - .5, X[:, 1].max() + .5
 
     # define the x and y scale
     x1grid = np.arange(min1, max1, 0.1)
@@ -181,24 +192,28 @@ def sample_as_mini_batches(x_train: np.ndarray, batch_size: int):
 
 
 # Create a scatter plot showing the samples & draw a contour plot to distinguish the two classes in 2D feature space
-def plot_boundaries_and_scatter(X: list, y_true: np.ndarray, nn: NN = None):
+def plot_boundaries_and_scatter(X: list, y_true: np.ndarray, nn: NN = None, fname=None):
     # Calculate the mesh data
     xx, yy, uniformPC = make_uniform_grid(X)
     if nn is not None:
         zz = predict(nn, uniformPC.T).reshape(xx.shape)
         zz[zz < .5] = 0
-        zz[zz >= .5] = 1
-        title = ''
+        zz[zz >= .5] = 1.
+        title = 'NN Decision Boundaries'
     else:
         zz = kMeans.predict(uniformPC).reshape(xx.shape)
-        title = 'K-Means K={:d}'.format(K)
+        title = 'K-Means K={:d} Decision Boundaries'.format(K)
 
     # Create color maps
-    cmap_light = ListedColormap(['#AAFFAA', '#FFAAAA'])
+    cnt0 = np.count_nonzero(zz)
+    if cnt0 == np.prod(zz.shape):
+        cmap_light = ListedColormap(['#FFAAAA'])
+    else:
+        cmap_light = ListedColormap(['#AAFFAA', '#FFAAAA'])
     cmap_bold = ListedColormap(['#00FF00', '#FF0000'])
 
     # Draw the mesh data & data samples
-    plt.pcolormesh(xx, yy, zz, cmap=cmap_light)
+    plt.contourf(xx, yy, zz, cmap=cmap_light)
     plt.scatter(X[y_true == 0, 0], X[y_true == 0, 1], c=cmap_bold.colors[0], label='Healthy')
     plt.scatter(X[y_true == 1, 0], X[y_true == 1, 1], c=cmap_bold.colors[1], label='Sick')
 
@@ -207,11 +222,15 @@ def plot_boundaries_and_scatter(X: list, y_true: np.ndarray, nn: NN = None):
     plt.ylabel('Principal Component 2')
     plt.legend()
 
+    fig = plt.gcf()
     plt.show()
+    if fname is not None:
+        plt.draw()
+        fig.savefig(fname, dpi=100, bbox_inches='tight')
 
 
 if __name__ == '__main__':
-    N_ITER = 200
+    N_ITER = 500
 
     # Read the data
     X = read_csv(fname)
@@ -241,7 +260,7 @@ if __name__ == '__main__':
     print('explained variance ratio:', pca.explained_variance_ratio_, sum(pca.explained_variance_ratio_))
 
     # plot_cdf(X)
-    plot(pc, Y, 'Reduced Feature Space')
+    # plot(pc, Y, 'Reduced Feature Space')
 
     # Apply K-Means to see its performance
     K = 2
@@ -256,12 +275,14 @@ if __name__ == '__main__':
     print('K-Means K={:d} gives an avg. acc. of {:.1f} % over {:d} runs'.format(K, a_avg * 100, n_runs))
     plot_boundaries_and_scatter(pc, Y)
 
-    lr_set = [.2, .1, .05]
-    # lr_set = [.005]
-    Ki_set = [2, 5, 10]
-    # Ki_set = [5]
-    N_set = [2, 5, 10]
-    # N_set = [5]
+    # lr=.01, Ki=10, N=5 gives good results
+    # and (.001, 10, 10)
+    # lr_set = [.02, .01, .002]
+    lr_set = [.002]
+    # Ki_set = [2, 5, 10]
+    Ki_set = [10]
+    # N_set = [2, 5, 10]
+    N_set = [10]
 
     for lr in lr_set:
         for Ki in Ki_set:  # #neurons per layer
@@ -279,7 +300,8 @@ if __name__ == '__main__':
                 train(nn, X_train, y_train)
 
                 # Contour plot to distinguish the two classes in 2D feature space
-                plot_boundaries_and_scatter(pc, Y, nn)
+                fname = 'nn_db.png'
+                plot_boundaries_and_scatter(pc, Y, nn, fname=fname)
 
                 # validate(nn, x_val, y_val)
                 y_pred, a = test(nn, X_test, y_test)
