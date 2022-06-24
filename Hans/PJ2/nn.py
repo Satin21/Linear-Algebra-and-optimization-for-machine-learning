@@ -69,7 +69,8 @@ class NN:
     def learn(self, y_true: list):
 
         # Compute the gradients
-        err_grad = loss_der(y_true, self.y_pred)
+        # err_grad = loss_der(y_true, self.y_pred)
+        err_grad = mse_der(y_true, self.y_pred)
         for layer in reversed(self.layers):
             err_grad = layer.compute_grad(err_grad)
 
