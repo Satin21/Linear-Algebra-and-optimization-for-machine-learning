@@ -98,7 +98,7 @@ def validate(nn: NN, x_train: list, batch_size: int):
     pass
 
 
-# TODO: Test (using the test set)
+# Test the preformance (using the test set)
 def test(nn: NN, X: list, y_true: list):
     y_pred = nn(X.T)
     a = get_accuracy(y_true, y_pred)
@@ -121,13 +121,7 @@ def make_uniform_grid(X):
 
     xx, yy = np.meshgrid(x1grid, x2grid)
 
-    # flatten each grid to a vector
-    r1, r2 = xx.flatten(), yy.flatten()
-    r1, r2 = r1.reshape((len(r1), 1)), r2.reshape((len(r2), 1))
-
-    # horizontal stack vectors to create x1,x2 input for the model
-    grid = np.hstack((r1, r2))
-
+    # Flatten each grid to a vector & stack them
     return xx, yy, np.c_[xx.ravel(), yy.ravel()]
 
 
@@ -217,7 +211,7 @@ def plot_boundaries_and_scatter(X: list, y_true: np.ndarray, nn: NN = None):
 
 
 if __name__ == '__main__':
-    N_ITER = 500
+    N_ITER = 200
 
     # Read the data
     X = read_csv(fname)
@@ -225,11 +219,12 @@ if __name__ == '__main__':
     # Split the data in to the samples and labels
     X = np.array(X)
     Y = X[:, 13]  # Labels
-    X = X[:, :13]
-    print('X.shape:', X.shape)
+    X = X[:, :13]  # Features
+    print('Data from {:d} patients are read'.format(len(Y)))
 
     # Make the labels binary, i.e. (+1, -1) -> (1, 0)
     Y = (np.array(Y) + 1) / 2
+    print('{:.1f} % of the patients is healthy'.format(100 * sum(Y == 0) / len(Y)))
 
     X = mean_centered(X)
     # Cxx = cov_mat(X)
@@ -262,11 +257,11 @@ if __name__ == '__main__':
     plot_boundaries_and_scatter(pc, Y)
 
     lr_set = [.2, .1, .05]
-    lr_set = [.01, .1, .05]
+    # lr_set = [.005]
     Ki_set = [2, 5, 10]
-    Ki_set = [5, 2, 10]
+    # Ki_set = [5]
     N_set = [2, 5, 10]
-    N_set = [10, 5, 10]
+    # N_set = [5]
 
     for lr in lr_set:
         for Ki in Ki_set:  # #neurons per layer
@@ -276,7 +271,8 @@ if __name__ == '__main__':
 
                 # Create a NN
                 n_per_layer = [Ki for i in range(N)]
-                nn = NN(2, 1, N, n_per_layer, lr=lr, optimizer='gd')
+                nn = NN(2, 1, N, n_per_layer, lr=lr)  # Train using the Adam gradient optimizer
+                # nn = NN(2, 1, N, n_per_layer, lr=lr, optimizer='gd')  # Train using standard gradient descent
 
                 X_train, X_test, y_train, y_test = split_data(pc, Y, 0.25)  # Take 25% of the data set as test data
 
