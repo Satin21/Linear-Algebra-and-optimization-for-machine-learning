@@ -103,7 +103,7 @@ class Layer:
             return y[0]
         return y
 
-    # Compute the gradient of the loss function w.r.t. the parameters.
+    # Compute the gradient of the loss function w.r.t. the parameters W and b
     # Inspired by https://medium.com/@neuralthreads/backpropagation-made-super-easy-for-you-part-1-6fb4aa5a0aaf
     # ADAM GD, see e.g. p.105 of the lecture notes
     def compute_grad(self, err_grad):

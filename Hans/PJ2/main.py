@@ -1,13 +1,13 @@
 import argparse
 import csv
 import time
+from KMeans import KMeans
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.colors import ListedColormap
 from nn import NN, loss
-from pandas import DataFrame
 from progressPlotter import plot_result
-from scipy.spatial.distance import cdist
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -92,12 +92,14 @@ def test(nn: NN, X: list, y_true: list):
 
     return y_pred, a
 
+
 def predict(nn: NN, X: list):
     return nn(X)
 
+
 def make_uniform_grid(X):
-    min1, max1 = X[:, 0].min()-1, X[:, 0].max()+1
-    min2, max2 = X[:, 1].min()-1, X[:, 1].max()+1
+    min1, max1 = X[:, 0].min() - 1, X[:, 0].max() + 1
+    min2, max2 = X[:, 1].min() - 1, X[:, 1].max() + 1
 
     # define the x and y scale
     x1grid = np.arange(min1, max1, 0.1)
@@ -110,12 +112,12 @@ def make_uniform_grid(X):
     r1, r2 = r1.reshape((len(r1), 1)), r2.reshape((len(r2), 1))
 
     # horizontal stack vectors to create x1,x2 input for the model
-    grid = np.hstack((r1,r2))
+    grid = np.hstack((r1, r2))
 
-    return xx, yy, grid
+    return xx, yy, np.c_[xx.ravel(), yy.ravel()]
 
 
-# Split the data into training and validation data
+# Split the data into training and test data
 def split_data(X: list, Y: list, test_size: float):
     # Apply stratified sampling
     return train_test_split(X, Y, stratify=Y, test_size=test_size)
@@ -170,53 +172,34 @@ def sample_as_mini_batches(x_train: np.ndarray, batch_size: int):
     return [x_train[arr] for arr in random_samples]
 
 
-# @jit(nopython=True, parallel=True)
-def kMeans(X: np.ndarray, y_true, K: int):
-    # log('Starting K-means clustering using the metric \'%s\'' % metric)
+# Create a scatter plot showing the samples & draw a contour plot to distinguish the two classes in 2D feature space
+def plot_boundaries_and_scatter(X: list, y_true: np.ndarray, nn: NN = None):
+    # Calculate the mesh data
+    xx, yy, uniformPC = make_uniform_grid(X)
+    if nn is not None:
+        zz = predict(nn, uniformPC.T).reshape(xx.shape)
+        zz[zz < .5] = 0
+        zz[zz >= .5] = 1
+        title = ''
+    else:
+        zz = kMeans.predict(uniformPC).reshape(xx.shape)
+        title = 'K-Means K={:d}'.format(K)
 
-    # Randomly initialize the centroids c
-    N, M = X.shape
-    c = X[np.random.randint(N, size=K)]
-    y = [-1] * N  # Labels
+    # Create color maps
+    cmap_light = ListedColormap(['#AAFFAA', '#FFAAAA'])
+    cmap_bold = ListedColormap(['#00FF00', '#FF0000'])
 
-    ePrev = M * N + 1
-    eNew = ePrev - 1
-    while ePrev - eNew > 0:
-        ePrev = eNew
-        eNew = 0
+    # Draw the mesh data & data samples
+    plt.pcolormesh(xx, yy, zz, cmap=cmap_light)
+    plt.scatter(X[y_true == 0, 0], X[y_true == 0, 1], c=cmap_bold.colors[0], label='Healthy')
+    plt.scatter(X[y_true == 1, 0], X[y_true == 1, 1], c=cmap_bold.colors[1], label='Sick')
 
-        # Assign x_i to cluster k = argmin_j || x_i - c_j ||
-        for i, x in enumerate(X):
-            dists = cdist([x], c, 'sqeuclidean')
-            y[i] = np.argmin(dists)
+    plt.title(title)
+    plt.xlabel('Principal Component 1')
+    plt.ylabel('Principal Component 2')
+    plt.legend()
 
-        # Update the centroid positions
-        for k in range(K):
-            Ck = X[[i for i, yi in enumerate(y) if yi == k]]  # Compute Ck = {x_i where the label y_i = k}
-            if len(Ck) > 0:
-                c[k] = Ck.mean(axis=0)  # Centroid = the mean of the elements/columns in Ck
-                eNew += cdist([c[k]], Ck).sum()  # Compute the error
-            else:
-                # Try to find a good position for this centroid
-                c[k] = c.mean()
-
-    # Determine the accuracy
-    a = 0
-    for k in range(K):
-        Lk = y_true[[i for i, yi in enumerate(y) if yi == k]]  # Lk = {y_true_i : y_i = k}
-        Lk = DataFrame(data=Lk)
-        cnt = Lk.value_counts()
-        cnt = cnt.values
-        if len(cnt) > 0:
-            a += cnt[0]
-    a /= N
-
-    return y, a  # Return the labels & accuracy
-
-
-# TODO: Craete a plot showing the scattered data & labeling areas
-def create_plot_data(nn: NN, y_pred: list):
-    pass
+    plt.show()
 
 
 if __name__ == '__main__':
@@ -249,15 +232,15 @@ if __name__ == '__main__':
     print('explained variance ratio:', pca.explained_variance_ratio_, sum(pca.explained_variance_ratio_))
 
     # plot_cdf(X)
-    plot(pc, Y, 'Reduced Feature Space')
+    # plot(pc, Y, 'Reduced Feature Space')
 
     # Apply K-Means to see its performance
     K = 2
+    kMeans = KMeans()
     y_pred, a = kMeans(pc, Y, K)
+    print('K-Means cluster centers:', kMeans.cluster_centers)
     print('K-Means K={:d} gives an acc. of {:.0f} %'.format(K, a * 100))
-
-    # plot(pc, y, 'K-Means K={:d}'.format(K))  # TODO (Sattish): use this line & plot the labeling areas in the background
-    plot(pc, y_pred, 'K-Means K={:d}'.format(K))
+    plot_boundaries_and_scatter(pc, Y)
 
     lr_set = [.2, .1, .05]
     Ki_set = [2, 5, 10]
@@ -266,7 +249,8 @@ if __name__ == '__main__':
     for lr in lr_set:
         for Ki in Ki_set:  # #neurons per layer
             for N in N_set:  # #leyare
-                print('Start training using {:d} layers, each containing {:d} neurons, with lr = {:.3f}'.format(N, Ki, lr))
+                print('Start training using {:d} layers, each containing {:d} neurons, with lr = {:.3f}'.format(N, Ki,
+                                                                                                                lr))
 
                 # Create a NN
                 n_per_layer = [Ki for i in range(N)]
@@ -276,13 +260,9 @@ if __name__ == '__main__':
 
                 train(nn, X_train, y_train)
 
-                ### contour plot to distinguish the two classes in 2D feature space
-                xx, yy, uniformPC = make_uniform_grid(pc)
-                y_pred = predict(nn, uniformPC.T)
-                zz = y_pred.reshape(xx.shape)
-                plt.contourf(xx, yy, zz, cmap = 'Paired');
-                plt.show()
-                
+                # Contour plot to distinguish the two classes in 2D feature space
+                plot_boundaries_and_scatter(pc, Y, nn)
+
                 # validate(nn, x_val, y_val)
                 y_pred, a = test(nn, X_test, y_test)
                 # plots.append(create_plot_data(nn, y_pred))  # TODO: this is just an idea for the 3x3 plot
