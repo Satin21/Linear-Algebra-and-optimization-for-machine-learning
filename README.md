@@ -1,4 +1,4 @@
-# LAOML Project 2 building a neural network to claissfy disease based on reduced features.
+# LAOML Project 2 building a neural network to classify disease based on reduced features.
 
 
 We have added a python script for each function/class separately.
